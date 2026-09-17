@@ -1,0 +1,55 @@
+import type { PrototypeState } from "./types";
+
+export const demoState: PrototypeState = {
+  products: [
+    { id: "p1", name: "Iced Latte", category: "Coffee", price: 850, cost: 280, emoji: "🥤", available: true, popular: true },
+    { id: "p2", name: "Cappuccino", category: "Coffee", price: 800, cost: 274, emoji: "☕", available: true, popular: true },
+    { id: "p3", name: "Flat White", category: "Coffee", price: 780, cost: 268, emoji: "☕", available: true },
+    { id: "p4", name: "Espresso", category: "Coffee", price: 450, cost: 126, emoji: "☕", available: true },
+    { id: "p5", name: "Matcha Latte", category: "Tea", price: 950, cost: 390, emoji: "🍵", available: true, popular: true },
+    { id: "p6", name: "Iced Lemon Tea", category: "Tea", price: 620, cost: 184, emoji: "🍋", available: true },
+    { id: "p7", name: "Mango Smoothie", category: "Cold drinks", price: 980, cost: 448, emoji: "🥭", available: true },
+    { id: "p8", name: "Berry Fizz", category: "Cold drinks", price: 720, cost: 256, emoji: "🫐", available: true },
+    { id: "p9", name: "Butter Croissant", category: "Bakery", price: 600, cost: 242, emoji: "🥐", available: true, popular: true },
+    { id: "p10", name: "Cinnamon Roll", category: "Bakery", price: 650, cost: 278, emoji: "🍥", available: true },
+    { id: "p11", name: "Avocado Toast", category: "Food", price: 1450, cost: 635, emoji: "🥑", available: true },
+    { id: "p12", name: "Chicken Panini", category: "Food", price: 1250, cost: 562, emoji: "🥪", available: false },
+  ],
+  orders: [
+    { id: "o1048", number: "#1048", customer: "Nethmi P.", type: "Dine in", status: "Received", total: 2050, items: 3, placedAt: "2 min" },
+    { id: "o1047", number: "#1047", customer: "Walk-in", type: "Pickup", status: "Preparing", total: 1600, items: 2, placedAt: "6 min" },
+    { id: "o1046", number: "#1046", customer: "Kavindu S.", type: "Delivery", status: "Preparing", total: 2880, items: 4, placedAt: "11 min" },
+    { id: "o1045", number: "#1045", customer: "Amani R.", type: "Dine in", status: "Ready", total: 950, items: 1, placedAt: "14 min" },
+    { id: "o1044", number: "#1044", customer: "Walk-in", type: "Pickup", status: "Completed", total: 1250, items: 2, placedAt: "22 min" },
+    { id: "o1043", number: "#1043", customer: "Dilshan K.", type: "Dine in", status: "Completed", total: 3100, items: 5, placedAt: "29 min" },
+  ],
+  stock: [
+    { id: "s1", name: "Fresh milk", category: "Dairy", quantity: 8.2, unit: "L", minimum: 12, value: 4510, supplier: "Highland Foods", trend: -9 },
+    { id: "s2", name: "Arabica beans", category: "Coffee", quantity: 18.4, unit: "kg", minimum: 10, value: 169280, supplier: "Serendib Roasters", trend: 8 },
+    { id: "s3", name: "Oat milk", category: "Dairy", quantity: 14, unit: "L", minimum: 8, value: 23800, supplier: "Good Market", trend: 2 },
+    { id: "s4", name: "Matcha powder", category: "Tea", quantity: 2.8, unit: "kg", minimum: 2, value: 42000, supplier: "Tea Traders", trend: 0 },
+    { id: "s5", name: "Vanilla syrup", category: "Syrup", quantity: 4, unit: "btl", minimum: 5, value: 11200, supplier: "ABC Foods", trend: 4 },
+    { id: "s6", name: "12oz cups", category: "Packaging", quantity: 620, unit: "pcs", minimum: 300, value: 18600, supplier: "PackRight", trend: 0 },
+    { id: "s7", name: "Butter croissants", category: "Bakery", quantity: 24, unit: "pcs", minimum: 18, value: 5808, supplier: "Bake House", trend: 3 },
+  ],
+  customers: [
+    { id: "c1", name: "Pasindu Perera", email: "pasindu.p@example.com", phone: "+94 77 234 8190", visits: 47, spent: 72400, points: 724, favorite: "Iced Latte", segment: "VIP", lastVisit: "Yesterday" },
+    { id: "c2", name: "Nethmi Jayasinghe", email: "nethmi@example.com", phone: "+94 71 883 2014", visits: 28, spent: 41850, points: 418, favorite: "Matcha Latte", segment: "Regular", lastVisit: "Today" },
+    { id: "c3", name: "Kavindu Silva", email: "kavindu@example.com", phone: "+94 76 420 1198", visits: 19, spent: 26700, points: 267, favorite: "Cappuccino", segment: "Regular", lastVisit: "3 days ago" },
+    { id: "c4", name: "Amani Rodrigo", email: "amani@example.com", phone: "+94 75 339 1772", visits: 4, spent: 5700, points: 57, favorite: "Berry Fizz", segment: "New", lastVisit: "Today" },
+    { id: "c5", name: "Dilshan Fernando", email: "dilshan@example.com", phone: "+94 77 992 4401", visits: 34, spent: 48600, points: 486, favorite: "Flat White", segment: "At risk", lastVisit: "32 days ago" },
+  ],
+  employees: [
+    { id: "e1", name: "Ravindu Jay", role: "Head barista", shift: "06:00 – 14:00", status: "Working", avatar: "RJ", hours: 36.5 },
+    { id: "e2", name: "Shenali De Alwis", role: "Cashier", shift: "08:00 – 16:00", status: "Working", avatar: "SD", hours: 34 },
+    { id: "e3", name: "Minuka Perera", role: "Barista", shift: "07:00 – 15:00", status: "Late", avatar: "MP", hours: 29.5 },
+    { id: "e4", name: "Hiruni Silva", role: "Kitchen", shift: "12:00 – 20:00", status: "Scheduled", avatar: "HS", hours: 31 },
+    { id: "e5", name: "Akeel Farook", role: "Supervisor", shift: "14:00 – 22:00", status: "Scheduled", avatar: "AF", hours: 38 },
+  ],
+  activities: [
+    { id: "a1", title: "Order #1048 received", detail: "Dine in · LKR 2,050", time: "2m", tone: "green" },
+    { id: "a2", title: "Low stock detected", detail: "Fresh milk below minimum", time: "8m", tone: "red" },
+    { id: "a3", title: "Invoice approved", detail: "Serendib Roasters · LKR 85,000", time: "21m", tone: "blue" },
+    { id: "a4", title: "Team member clocked in", detail: "Shenali · 08:01", time: "1h", tone: "amber" },
+  ],
+};
