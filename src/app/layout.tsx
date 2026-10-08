@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { DM_Sans, Manrope } from "next/font/google";
 import "./globals.css";
 import "./prototype.css";
+import "./ui-polish.css";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",

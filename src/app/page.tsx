@@ -1,10 +1,10 @@
-import PrototypeApp from "@/components/prototype/prototype-app";
-import { PrototypeProvider } from "@/components/prototype/prototype-provider";
+import CafeApp from "@/components/app/cafe-app";
+import { AppProvider } from "@/components/app/app-provider";
 
 export default function Home() {
   return (
-    <PrototypeProvider>
-      <PrototypeApp />
-    </PrototypeProvider>
+    <AppProvider>
+      <CafeApp />
+    </AppProvider>
   );
 }

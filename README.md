@@ -1,36 +1,87 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CaféOS
 
-## Getting Started
+Multi-tenant café operating system. Phase 1 focuses on the connected sale → recipe → stock → profit chain.
 
-First, run the development server:
+## Stack
+
+- Next.js App Router + TypeScript
+- Firestore-shaped data layer via Firebase Admin (cloud or emulator)
+- Local file-backed store for zero-setup development
+- Modular monolith API via Route Handlers
+
+## Quick start (no Docker, no Firebase project)
 
 ```bash
+npm install
+cp .env.example .env
+npm run db:seed
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Default `DATA_BACKEND=memory` stores data in `.data/cafeos-memory.json`. No demo products/orders are seeded.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Firestore emulator (optional local Firebase)
 
-## Learn More
+```bash
+npm run db:up
+```
 
-To learn more about Next.js, take a look at the following resources:
+Then set in `.env`:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```env
+DATA_BACKEND="firestore"
+FIRESTORE_EMULATOR_HOST="127.0.0.1:8080"
+FIREBASE_PROJECT_ID="demo-cafeos"
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run db:seed
+npm run dev
+```
 
-## Deploy on Vercel
+Emulator UI: [http://127.0.0.1:4000](http://127.0.0.1:4000)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Connect a real Firebase project
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Create a project at [Firebase Console](https://console.firebase.google.com/).
+2. Enable **Firestore**.
+3. Project settings → Service accounts → Generate new private key.
+4. Update `.env`:
+
+```env
+DATA_BACKEND="firestore"
+FIREBASE_PROJECT_ID="your-project-id"
+FIREBASE_CLIENT_EMAIL="firebase-adminsdk-...@your-project-id.iam.gserviceaccount.com"
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+DEFAULT_TENANT_ID="tenant_default"
+DEFAULT_BRANCH_ID="branch_default"
+```
+
+Leave `FIRESTORE_EMULATOR_HOST` unset for cloud.
+
+```bash
+npm run db:seed
+npm run dev
+```
+
+## Useful scripts
+
+| Script | Purpose |
+|--------|---------|
+| `npm run db:seed` | Upsert default tenant + branch only |
+| `npm run db:up` | Start Firestore emulator |
+| `npm run dev` | Next.js development server |
+
+## Data model
+
+Collections under `tenants/{tenantId}/branches/{branchId}/`:
+
+- `products`, `orders`, `stock`, `customers`, `employees`, `activities`
+- `meta/counters` for order numbers
+
+## Notes
+
+- Auth/RBAC is not enabled yet. APIs use `DEFAULT_TENANT_ID` / `DEFAULT_BRANCH_ID`.
+- Create products in **Menu & recipes**, then sell from **Point of sale**.

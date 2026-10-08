@@ -49,12 +49,12 @@ export function Modal({
   );
 }
 
-export function DemoToast({ message, onClose }: { message: string; onClose: () => void }) {
+export function Toast({ message, onClose }: { message: string; onClose: () => void }) {
   return <div className="demo-toast"><span>✓</span>{message}<button onClick={onClose}>×</button></div>;
 }
 
 export function BarChart({ values, labels }: { values: number[]; labels: string[] }) {
-  const max = Math.max(...values);
+  const max = Math.max(...values, 1);
   return (
     <div className="bar-chart" aria-label="Bar chart">
       {values.map((value, index) => (

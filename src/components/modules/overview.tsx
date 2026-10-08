@@ -1,40 +1,68 @@
 "use client";
 
-import { ArrowUpRight, Clock3, Package, ShoppingBag, Sparkles, Users } from "lucide-react";
-import { usePrototype } from "@/components/prototype/prototype-provider";
+import { ArrowUpRight, Package, ShoppingBag, Users } from "lucide-react";
+import { useApp } from "@/components/app/app-provider";
 import { BarChart, SectionHeader, StatusBadge } from "@/components/ui/prototype-ui";
+import type { Order } from "@/lib/types";
 
 export default function Overview({ navigate }: { navigate: (view: string) => void }) {
-  const { orders, stock, customers, activities } = usePrototype();
+  const { orders, stock, customers, activities, tenant, settings } = useApp();
+  const currency = settings.currency;
+  const salesOrders = orders.filter((order) => order.status !== "Refunded");
   const lowStock = stock.filter((item) => item.quantity < item.minimum);
-  const openOrders = orders.filter((order) => order.status !== "Completed");
+  const openOrders = orders.filter((order) => order.status !== "Completed" && order.status !== "Refunded");
+  const netSales = salesOrders.reduce((sum, order) => sum + order.total, 0);
+  const chartValues = buildDailyTotals(salesOrders);
+  const todayLabel = new Date().toLocaleDateString(undefined, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
 
   return (
     <div className="module-page">
       <SectionHeader
-        eyebrow="Thursday, 17 September"
-        title="Good morning, Pasindu"
-        description="Here is what is happening at Bloom Coffee today."
+        eyebrow={todayLabel}
+        title={`Welcome to ${tenant.name || "your café"}`}
+        description={orders.length || stock.length || customers.length
+          ? "Live operational snapshot for your branch."
+          : "Your café is ready. Add menu items and take the first order."}
         actions={<><span className="live-chip"><i />Live data</span><button className="btn btn-primary" onClick={() => navigate("pos")}>New order</button></>}
       />
 
       <div className="metric-grid">
-        <article className="metric-card green"><span><ArrowUpRight size={17} /></span><p>Net sales</p><strong>LKR 184,250</strong><small><b>+14.2%</b> vs yesterday</small></article>
-        <article className="metric-card sand"><span><ShoppingBag size={17} /></span><p>Orders</p><strong>312</strong><small><b>+8.4%</b> · 28 online</small></article>
-        <article className="metric-card blue"><span><Sparkles size={17} /></span><p>Gross profit</p><strong>LKR 119,762</strong><small><b>65.0%</b> gross margin</small></article>
-        <article className="metric-card purple"><span><Users size={17} /></span><p>Customers</p><strong>{customers.length + 1},248</strong><small><b>+32</b> this week</small></article>
+        <article className="metric-card green"><span><ArrowUpRight size={17} /></span><p>Net sales</p><strong>{currency} {netSales.toLocaleString()}</strong><small>Excludes refunds</small></article>
+        <article className="metric-card sand"><span><ShoppingBag size={17} /></span><p>Orders</p><strong>{salesOrders.length}</strong><small>{openOrders.length} in progress</small></article>
+        <article className="metric-card blue"><span><Package size={17} /></span><p>Low stock</p><strong>{lowStock.length}</strong><small>{stock.length} tracked items</small></article>
+        <article className="metric-card purple"><span><Users size={17} /></span><p>Customers</p><strong>{customers.length}</strong><small>On file</small></article>
       </div>
 
       <div className="content-grid overview-main-grid">
         <article className="panel">
-          <div className="panel-head"><div><p>Sales performance</p><h2>LKR 1.18M</h2><small className="success-text">↗ 12.8% from last week</small></div><button className="select-control">Last 7 days⌄</button></div>
-          <BarChart values={[118, 142, 131, 166, 149, 192, 184]} labels={["Fri", "Sat", "Sun", "Mon", "Tue", "Wed", "Thu"]} />
+          <div className="panel-head">
+            <div>
+              <p>Sales performance</p>
+              <h2>{currency} {netSales.toLocaleString()}</h2>
+              <small>{salesOrders.length ? "Last 7 days from stored orders" : "No sales recorded yet"}</small>
+            </div>
+          </div>
+          {chartValues.some((value) => value > 0) ? (
+            <BarChart values={chartValues} labels={weekdayLabels()} />
+          ) : (
+            <div className="placeholder-panel embedded"><p>Sales chart will appear after your first completed orders.</p></div>
+          )}
         </article>
         <article className="panel attention-panel">
-          <div className="panel-head"><div><p>Needs attention</p><h3>{lowStock.length + 2} active alerts</h3></div><button className="link-button" onClick={() => navigate("inventory")}>View all →</button></div>
-          <button className="attention-row" onClick={() => navigate("inventory")}><span className="attention-icon red"><Package size={16} /></span><div><strong>Milk may run out tomorrow</strong><small>8.2 L left · 12.4 L daily usage</small></div><ArrowUpRight size={14} /></button>
-          <button className="attention-row" onClick={() => navigate("menu")}><span className="attention-icon amber"><ArrowUpRight size={16} /></span><div><strong>Bean cost increased 8%</strong><small>17 menu margins affected</small></div><ArrowUpRight size={14} /></button>
-          <button className="attention-row" onClick={() => navigate("team")}><span className="attention-icon blue"><Clock3 size={16} /></span><div><strong>One team member is late</strong><small>Morning shift · Colombo 07</small></div><ArrowUpRight size={14} /></button>
+          <div className="panel-head"><div><p>Needs attention</p><h3>{lowStock.length} active alerts</h3></div><button className="link-button" onClick={() => navigate("inventory")}>View all →</button></div>
+          {lowStock.length === 0 ? (
+            <div className="placeholder-panel embedded"><p>No stock alerts. Inventory looks healthy.</p></div>
+          ) : lowStock.slice(0, 3).map((item) => (
+            <button className="attention-row" key={item.id} onClick={() => navigate("inventory")}>
+              <span className="attention-icon red"><Package size={16} /></span>
+              <div><strong>{item.name} is low</strong><small>{item.quantity} {item.unit} left · min {item.minimum}</small></div>
+              <ArrowUpRight size={14} />
+            </button>
+          ))}
         </article>
       </div>
 
@@ -42,18 +70,64 @@ export default function Overview({ navigate }: { navigate: (view: string) => voi
         <article className="panel">
           <div className="panel-head"><div><p>Live orders</p><h3>{openOrders.length} in progress</h3></div><button className="link-button" onClick={() => navigate("orders")}>Open KDS →</button></div>
           <div className="compact-list">
-            {openOrders.slice(0, 4).map((order) => <div className="compact-row" key={order.id}><strong>{order.number}</strong><span>{order.customer}</span><small>{order.items} items</small><b>LKR {order.total.toLocaleString()}</b><StatusBadge tone={order.status}>{order.status}</StatusBadge></div>)}
+            {openOrders.length === 0 ? (
+              <div className="placeholder-panel embedded"><p>No open orders yet.</p></div>
+            ) : openOrders.slice(0, 4).map((order) => (
+              <div className="compact-row" key={order.id}>
+                <strong>{order.number}</strong>
+                <span>{order.customer}</span>
+                <small>{order.items} items</small>
+                <b>{currency} {order.total.toLocaleString()}</b>
+                <StatusBadge tone={order.status}>{order.status}</StatusBadge>
+              </div>
+            ))}
           </div>
         </article>
         <article className="panel">
-          <div className="panel-head"><div><p>Recent activity</p><h3>Across your café</h3></div><span className="muted-label">Today</span></div>
+          <div className="panel-head"><div><p>Recent activity</p><h3>Across your café</h3></div><span className="muted-label">Live</span></div>
           <div className="activity-list">
-            {activities.slice(0, 4).map((item) => <div className="activity-row" key={item.id}><i className={`activity-dot ${item.tone}`} /><div><strong>{item.title}</strong><small>{item.detail}</small></div><time>{item.time}</time></div>)}
+            {activities.length === 0 ? (
+              <div className="placeholder-panel embedded"><p>Activity will show as orders and stock changes happen.</p></div>
+            ) : activities.slice(0, 4).map((item) => (
+              <div className="activity-row" key={item.id}>
+                <i className={`activity-dot ${item.tone}`} />
+                <div><strong>{item.title}</strong><small>{item.detail}</small></div>
+                <time>{item.time}</time>
+              </div>
+            ))}
           </div>
         </article>
       </div>
-
-      <div className="demo-callout"><Sparkles size={18} /><div><strong>AI has found 3 opportunities</strong><p>Promote Matcha Latte this afternoon and you could add an estimated LKR 18,400 in gross profit.</p></div><button onClick={() => navigate("ai")}>View AI insights</button></div>
     </div>
   );
+}
+
+function weekdayLabels() {
+  const days: string[] = [];
+  for (let i = 6; i >= 0; i -= 1) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toLocaleDateString(undefined, { weekday: "short" }));
+  }
+  return days;
+}
+
+function buildDailyTotals(orders: Order[]) {
+  const values: number[] = [];
+  for (let i = 6; i >= 0; i -= 1) {
+    const dayStart = new Date();
+    dayStart.setDate(dayStart.getDate() - i);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+    values.push(
+      orders
+        .filter((order) => {
+          const placed = new Date(order.placedAtIso);
+          return placed >= dayStart && placed < dayEnd;
+        })
+        .reduce((sum, order) => sum + order.total, 0),
+    );
+  }
+  return values;
 }

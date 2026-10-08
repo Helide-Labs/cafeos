@@ -29,6 +29,9 @@ body {
   background: var(--canvas);
   color: var(--ink);
   font-family: var(--font-dm-sans), Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
 }
 
 button,
@@ -867,5 +870,69 @@ a {
   .chart-wrap {
     padding-left: 15px;
     padding-right: 15px;
+  }
+}
+
+.receipt-print {
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.receipt-print header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.receipt-lines {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+}
+
+.receipt-lines li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border, #e8e8e8);
+}
+
+.receipt-lines li small {
+  grid-column: 1 / -1;
+  opacity: 0.75;
+}
+
+.receipt-totals {
+  margin: 0;
+}
+
+.receipt-totals div {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .receipt-print,
+  .receipt-print * {
+    visibility: visible;
+  }
+
+  .receipt-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    padding: 8mm;
+  }
+
+  .no-print {
+    display: none !important;
   }
 }
