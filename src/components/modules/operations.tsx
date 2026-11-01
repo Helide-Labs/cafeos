@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronRight, Clock3, CreditCard, ImagePlus, Minus, PackageCheck, Pencil, Plus, Search, ShoppingCart, SlidersHorizontal, Trash2, Upload, UtensilsCrossed, X } from "lucide-react";
 import { useApp } from "@/components/app/app-provider";
+import { useAppRole } from "@/components/app/role-context";
+import { ROLE_PROFILES } from "@/lib/roles";
 import { Modal, SectionHeader, StatusBadge } from "@/components/ui/prototype-ui";
 import {
   CATEGORY_EMOJI,
@@ -365,6 +367,7 @@ function ModifierPicker({ title, options, selected, setSelected, single = false 
 
 export function OrdersModule({ toast }: { toast: ToastFn }) {
   const { orders, settings, advanceOrder, refundOrder } = useApp();
+  const profile = ROLE_PROFILES[useAppRole()];
   const currency = settings.currency;
   const [view, setView] = useState<"list" | "kds">("kds");
   const [filter, setFilter] = useState("All");
@@ -400,18 +403,19 @@ export function OrdersModule({ toast }: { toast: ToastFn }) {
     ) : view === "kds" ? (
       <div className="kds-board">{["Received", "Preparing", "Ready"].map((status) => <section className="kds-column" key={status}><div className="kds-head"><div><i className={`kds-dot ${status.toLowerCase()}`} /><strong>{status}</strong></div><span>{orders.filter((order) => order.status === status).length}</span></div>{orders.filter((order) => order.status === status).map((order) => <article className="kds-ticket" key={order.id}><div><strong>{order.number}</strong><StatusBadge tone={order.type}>{order.type}</StatusBadge></div><h3>{order.customer}</h3><ul className="kds-lines">{(order.lines?.length ? order.lines : [{ name: `${order.items} items`, quantity: order.items, modifiers: [] as string[], price: 0, productId: null }]).map((line, index) => <li key={`${order.id}-${index}`}><strong>{line.quantity}× {line.name}</strong>{line.modifiers?.length ? <small>{line.modifiers.join(" · ")}</small> : null}</li>)}</ul><footer><span><Clock3 size={13} />{order.placedAt}</span><button onClick={() => advance(order.id, order.number)}>{nextLabel[order.status]}<ChevronRight size={14} /></button></footer></article>)}</section>)}</div>
     ) : (
-      <div className="data-table orders-table panel"><div className="table-head"><span>Order</span><span>Customer</span><span>Channel</span><span>Items</span><span>Total</span><span>Status</span><span>Actions</span></div>{shown.map((order) => <div className="table-row" key={order.id}><button type="button" className="linkish" onClick={() => setDetailOrder(order)}><strong>{order.number}</strong></button><span>{order.customer}</span><span>{order.type}</span><span>{order.items}</span><b>{currency} {order.total.toLocaleString()}</b><StatusBadge tone={order.status}>{order.status}</StatusBadge><span className="row-actions">{order.status !== "Completed" && order.status !== "Refunded" ? <button type="button" onClick={() => advance(order.id, order.number)}>{nextLabel[order.status]}</button> : null}{order.status !== "Refunded" ? <button type="button" onClick={() => void refund(order.id, order.number)}>Refund</button> : null}</span></div>)}</div>
+      <div className={`data-table orders-table panel${profile.showMoney ? "" : " no-money"}`}><div className="table-head"><span>Order</span><span>Customer</span><span>Channel</span><span>Items</span>{profile.showMoney && <span>Total</span>}<span>Status</span><span>Actions</span></div>{shown.map((order) => <div className="table-row" key={order.id}><button type="button" className="linkish" onClick={() => setDetailOrder(order)}><strong>{order.number}</strong></button><span>{order.customer}</span><span>{order.type}</span><span>{order.items}</span>{profile.showMoney && <b>{currency} {order.total.toLocaleString()}</b>}<StatusBadge tone={order.status}>{order.status}</StatusBadge><span className="row-actions">{order.status !== "Completed" && order.status !== "Refunded" ? <button type="button" onClick={() => advance(order.id, order.number)}>{nextLabel[order.status]}</button> : null}{profile.canRefund && order.status !== "Refunded" ? <button type="button" onClick={() => void refund(order.id, order.number)}>Refund</button> : null}</span></div>)}</div>
     )}
 
     <Modal open={!!detailOrder} onClose={() => setDetailOrder(null)} title={detailOrder ? `Order ${detailOrder.number}` : "Order"} wide>
       {detailOrder && (
         <div className="order-detail">
-          <p>{detailOrder.customer} · {detailOrder.type} · {detailOrder.paymentMethod}</p>
+          <p>{detailOrder.customer} · {detailOrder.type}{profile.showMoney ? ` · ${detailOrder.paymentMethod}` : ""}</p>
           <ul className="receipt-lines">
             {detailOrder.lines.map((line, index) => (
-              <li key={`${detailOrder.id}-line-${index}`}><span>{line.quantity}× {line.name}</span><b>{currency} {(line.price * line.quantity).toLocaleString()}</b></li>
+              <li key={`${detailOrder.id}-line-${index}`}><span>{line.quantity}× {line.name}</span>{profile.showMoney && <b>{currency} {(line.price * line.quantity).toLocaleString()}</b>}</li>
             ))}
           </ul>
+          {profile.showMoney && (
           <dl className="receipt-totals">
             <div><dt>Subtotal</dt><dd>{currency} {detailOrder.subtotal.toLocaleString()}</dd></div>
             {detailOrder.serviceCharge > 0 && <div><dt>Service charge</dt><dd>{currency} {detailOrder.serviceCharge.toLocaleString()}</dd></div>}
@@ -420,6 +424,7 @@ export function OrdersModule({ toast }: { toast: ToastFn }) {
             {detailOrder.tip > 0 && <div><dt>Tip</dt><dd>{currency} {detailOrder.tip.toLocaleString()}</dd></div>}
             <div><dt>Total</dt><dd><strong>{currency} {detailOrder.total.toLocaleString()}</strong></dd></div>
           </dl>
+          )}
         </div>
       )}
     </Modal>
@@ -922,6 +927,8 @@ export function InventoryModule({ toast }: { toast: ToastFn }) {
     updatePurchaseOrder,
   } = useApp();
   const currency = settings.currency;
+  const floorStock = ROLE_PROFILES[useAppRole()].inventory === "floor";
+  const inventoryTabs = floorStock ? ["Stock", "Waste", "Stock ledger"] : ["Stock", "Purchase orders", "Suppliers", "Waste", "Stock ledger"];
   const [tab, setTab] = useState("Stock");
   const [adjusting, setAdjusting] = useState<string | null>(null);
   const [countQty, setCountQty] = useState("");
@@ -937,6 +944,10 @@ export function InventoryModule({ toast }: { toast: ToastFn }) {
     return sum + (item ? recipeLineCost(stockUnitCost(item), entry.quantity) : 0);
   }, 0);
   const lowCount = stock.filter((i) => i.quantity < i.minimum).length;
+
+  useEffect(() => {
+    if (!inventoryTabs.includes(tab)) setTab("Stock");
+  }, [floorStock, tab]);
   const openPos = purchaseOrders.filter((po) => po.status !== "Received").length;
   const suppliers = [...new Set(stock.map((entry) => entry.supplier).filter(Boolean))];
 
@@ -1070,12 +1081,12 @@ export function InventoryModule({ toast }: { toast: ToastFn }) {
         }
       />
       <div className="metric-grid mini">
-        <article className="metric-card plain"><p>Inventory value</p><strong>{currency} {inventoryValue.toLocaleString()}</strong><small>Across {stock.length} tracked items</small></article>
+        {!floorStock && <article className="metric-card plain"><p>Inventory value</p><strong>{currency} {inventoryValue.toLocaleString()}</strong><small>Across {stock.length} tracked items</small></article>}
         <article className="metric-card plain"><p>Low stock</p><strong>{lowCount}</strong><small>{lowCount ? "Action recommended" : "All healthy"}</small></article>
-        <article className="metric-card plain"><p>Waste (est.)</p><strong>{currency} {wasteValue.toLocaleString()}</strong><small>{waste.length} logged entries</small></article>
-        <article className="metric-card plain"><p>Open POs</p><strong>{openPos}</strong><small>{purchaseOrders.length} total</small></article>
+        <article className="metric-card plain"><p>Waste (est.)</p><strong>{floorStock ? waste.length : `${currency} ${wasteValue.toLocaleString()}`}</strong><small>{waste.length} logged entries</small></article>
+        {!floorStock && <article className="metric-card plain"><p>Open POs</p><strong>{openPos}</strong><small>{purchaseOrders.length} total</small></article>}
       </div>
-      <div className="module-tabs">{["Stock", "Purchase orders", "Suppliers", "Waste", "Stock ledger"].map((value) => <button className={tab === value ? "active" : ""} key={value} onClick={() => setTab(value)}>{value}</button>)}</div>
+      <div className="module-tabs">{inventoryTabs.map((value) => <button className={tab === value ? "active" : ""} key={value} onClick={() => setTab(value)}>{value}</button>)}</div>
 
       {tab === "Stock" && (
         stock.length === 0 ? (

@@ -18,7 +18,9 @@ import {
 } from "lucide-react";
 import { useApp } from "@/components/app/app-provider";
 import { BarChart, Modal, SectionHeader, StatusBadge } from "@/components/ui/prototype-ui";
+import { useAppRole } from "@/components/app/role-context";
 import { TEAM_ROLES } from "@/lib/defaults";
+import { ROLE_AREAS, ROLE_PROFILES } from "@/lib/roles";
 import type { Campaign, Customer, Employee, Order } from "@/lib/types";
 
 type ToastFn = (message: string) => void;
@@ -168,24 +170,19 @@ function exportOrdersCsv(orders: Order[], timeZone: string) {
   URL.revokeObjectURL(url);
 }
 
-const ROLE_PERMISSIONS: { area: string; Owner: boolean; Manager: boolean; Cashier: boolean; Barista: boolean; Kitchen: boolean }[] = [
-  { area: "Point of sale", Owner: true, Manager: true, Cashier: true, Barista: false, Kitchen: false },
-  { area: "Orders & KDS", Owner: true, Manager: true, Cashier: true, Barista: true, Kitchen: true },
-  { area: "Menu & pricing", Owner: true, Manager: true, Cashier: false, Barista: false, Kitchen: false },
-  { area: "Inventory", Owner: true, Manager: true, Cashier: false, Barista: true, Kitchen: true },
-  { area: "Customers & campaigns", Owner: true, Manager: true, Cashier: true, Barista: false, Kitchen: false },
-  { area: "Team & schedule", Owner: true, Manager: true, Cashier: false, Barista: false, Kitchen: false },
-  { area: "Reports", Owner: true, Manager: true, Cashier: false, Barista: false, Kitchen: false },
-  { area: "Settings", Owner: true, Manager: false, Cashier: false, Barista: false, Kitchen: false },
-  { area: "Refunds", Owner: true, Manager: true, Cashier: true, Barista: false, Kitchen: false },
-];
-
 export function CustomersModule({ toast }: { toast: ToastFn }) {
   const { customers, campaigns, feedback, settings, createCustomer, updateCustomer, removeCustomer, createCampaign, updateCampaign, deleteCampaign, createFeedback } = useApp();
   const currency = settings.currency;
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Customer | null>(null);
   const [tab, setTab] = useState("Customers");
+  const allowCampaigns = ROLE_PROFILES[useAppRole()].campaigns;
+  const customerTabs = allowCampaigns
+    ? ["Customers", "Loyalty", "Campaigns", "Feedback"]
+    : ["Customers", "Loyalty", "Feedback"];
+  useEffect(() => {
+    if (!allowCampaigns && tab === "Campaigns") setTab("Customers");
+  }, [allowCampaigns, tab]);
   const [customerModal, setCustomerModal] = useState<"add" | Customer | null>(null);
   const [customerForm, setCustomerForm] = useState({ name: "", email: "", phone: "", favorite: "", segment: "Regular" as Customer["segment"] });
   const [loyaltyCustomerId, setLoyaltyCustomerId] = useState("");
@@ -362,7 +359,7 @@ export function CustomersModule({ toast }: { toast: ToastFn }) {
         <article className="metric-card plain"><p>Loyalty members</p><strong>{customers.filter((c) => c.points > 0).length}</strong><small>With points</small></article>
         <article className="metric-card plain"><p>Customer value</p><strong>{formatMoney(avgValue, currency)}</strong><small>Average lifetime spend</small></article>
       </div>
-      <div className="module-tabs">{["Customers", "Loyalty", "Campaigns", "Feedback"].map((value) => <button className={tab === value ? "active" : ""} key={value} onClick={() => setTab(value)}>{value}</button>)}</div>
+      <div className="module-tabs">{customerTabs.map((value) => <button className={tab === value ? "active" : ""} key={value} onClick={() => setTab(value)}>{value}</button>)}</div>
 
       {tab === "Customers" && (
         <>
@@ -656,19 +653,19 @@ export function TeamModule({ toast }: { toast: ToastFn }) {
 
       {tab === "Roles" && (
         <article className="panel settings-panel">
-          <div className="settings-title"><h2>Role permissions</h2><p>Reference matrix (enforced when auth ships).</p></div>
-          <div className="data-table">
+          <div className="settings-title"><h2>Role permissions</h2><p>The sidebar and dashboard follow this matrix. Switch roles from the sidebar.</p></div>
+          <div className="data-table roles-table">
             <div className="table-head"><span>Area</span>{TEAM_ROLES.map((role) => <span key={role}>{role}</span>)}</div>
-            {ROLE_PERMISSIONS.map((row) => (
+            {ROLE_AREAS.map((row) => (
               <div className="table-row" key={row.area}>
                 <strong>{row.area}</strong>
-                {TEAM_ROLES.map((role) => <span key={role}>{row[role] ? "✓" : "—"}</span>)}
+                {TEAM_ROLES.map((role) => <span key={role}>{row.allow(role) ? "✓" : "—"}</span>)}
               </div>
             ))}
           </div>
           <div className="roles-grid">
             {TEAM_ROLES.map((role) => (
-              <article className="panel role-card" key={role}><ShieldCheck /><h3>{role}</h3><p>Permissions are fixed for this release.</p></article>
+              <article className="panel role-card" key={role}><ShieldCheck /><h3>{role}</h3><p>{ROLE_PROFILES[role].summary}</p></article>
             ))}
           </div>
         </article>

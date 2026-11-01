@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { TEAM_ROLES } from "@/lib/defaults";
+import { canAccess, readStoredRole, ROLE_PROFILES, storeRole, type AppRole } from "@/lib/roles";
+import { RoleProvider } from "./role-context";
 import {
   BarChart3,
   Bell,
@@ -57,6 +60,9 @@ export default function CafeApp() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [toast, setToast] = useState("");
   const [helpOpen, setHelpOpen] = useState(false);
+  const [role, setRole] = useState<AppRole>("Owner");
+  const profile = ROLE_PROFILES[role];
+  const visibleNav = navigation.filter((item) => canAccess(role, item.id));
 
   const openOrders = orders.filter((order) => order.status !== "Completed" && order.status !== "Refunded").length;
   const lowStock = stock.filter((item) => item.quantity < item.minimum).length;
@@ -66,6 +72,21 @@ export default function CafeApp() {
     const timer = window.setTimeout(() => setToast(""), 2600);
     return () => window.clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    const stored = readStoredRole();
+    setRole(stored);
+  }, []);
+
+  useEffect(() => {
+    if (!canAccess(role, active)) setActive("overview");
+  }, [active, role]);
+
+  function selectRole(next: AppRole) {
+    setRole(next);
+    storeRole(next);
+    if (!canAccess(next, active)) setActive("overview");
+  }
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -93,8 +114,8 @@ export default function CafeApp() {
       ...orders.filter((o) => o.number.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q)).slice(0, 5).map((o) => ({ id: o.id, label: o.number, meta: o.customer, module: "orders" as ModuleId })),
       ...customers.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 5).map((c) => ({ id: c.id, label: c.name, meta: "Customer", module: "customers" as ModuleId })),
       ...stock.filter((s) => s.name.toLowerCase().includes(q)).slice(0, 5).map((s) => ({ id: s.id, label: s.name, meta: "Stock", module: "inventory" as ModuleId })),
-    ].slice(0, 12);
-  }, [customers, orders, products, searchQuery, stock]);
+    ].filter((hit) => canAccess(role, hit.module)).slice(0, 12);
+  }, [customers, orders, products, role, searchQuery, stock]);
 
   const activeModule = {
     overview: <Overview navigate={navigate} />,
@@ -108,7 +129,17 @@ export default function CafeApp() {
     settings: <SettingsModule toast={setToast} />,
   }[active];
 
+  const helpTopics = [
+    { title: "Add a product", body: "Open Menu & recipes, choose Add product, set category, price, and optional modifier groups. Link recipes under the Recipes tab so sales deduct stock.", module: "menu" as ModuleId },
+    { title: "Take an order", body: "Use Point of sale to pick items, attach a customer for loyalty, apply discounts or tips, then charge via card, cash, QR, or split payment.", module: "pos" as ModuleId },
+    { title: "Work the queue", body: "Open Orders & KDS to start tickets, mark them ready, and complete them when they leave the pass.", module: "orders" as ModuleId },
+    { title: "Manage inventory", body: "In Inventory, check on-hand levels, record waste, and refill anything below its minimum.", module: "inventory" as ModuleId },
+  ].filter((topic) => canAccess(role, topic.module));
+  const stockAlerts = canAccess(role, "inventory");
+  const alertCount = stockAlerts ? lowStock : openOrders;
+
   return (
+    <RoleProvider role={role}>
     <div className={`prototype-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
       {mobileOpen && <button className="mobile-scrim" aria-label="Close menu" onClick={() => setMobileOpen(false)} />}
       <aside className={`prototype-sidebar ${mobileOpen ? "mobile-open" : ""}`}>
@@ -131,7 +162,7 @@ export default function CafeApp() {
             {collapsed ? <PanelLeftOpen size={17} /> : <PanelLeftClose size={17} />}
           </button>
         </div>
-        <button className="branch-select" type="button" title={`${tenant.name || "My Café"} · ${branch.location || branch.name}`} onClick={() => navigate("settings")}>
+        <button className="branch-select" type="button" title={`${tenant.name || "My Café"} · ${branch.location || branch.name}`} onClick={() => { if (canAccess(role, "settings")) navigate("settings"); }}>
           <span>{branchInitials(tenant.name)}</span>
           <div>
             <strong>{tenant.name || "My Café"}</strong>
@@ -139,10 +170,16 @@ export default function CafeApp() {
           </div>
           <ChevronDown size={15} />
         </button>
+        <label className="role-switch">
+          <span>Role</span>
+          <select aria-label="Dashboard role" value={role} onChange={(event) => selectRole(event.target.value as AppRole)}>
+            {TEAM_ROLES.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+        </label>
         <div className="sidebar-scroll">
           <p className="side-label">Workspace</p>
           <nav>
-            {navigation.map((item) => {
+            {visibleNav.map((item) => {
               const Icon = item.icon;
               const badge = item.id === "orders" && openOrders > 0
                 ? String(openOrders)
@@ -158,7 +195,7 @@ export default function CafeApp() {
           </nav>
           <div className="side-bottom">
             <p className="side-label">Manage</p>
-            <button className={active === "settings" ? "active" : ""} onClick={() => navigate("settings")} type="button"><Settings size={17} /><span>Settings</span></button>
+            {canAccess(role, "settings") && <button className={active === "settings" ? "active" : ""} onClick={() => navigate("settings")} type="button"><Settings size={17} /><span>Settings</span></button>}
             <button onClick={() => setHelpOpen(true)} type="button"><CircleHelp size={17} /><span>Help centre</span></button>
           </div>
         </div>
@@ -171,25 +208,30 @@ export default function CafeApp() {
           <div className="topbar-actions">
             <button className="top-icon" aria-label="Notifications" onClick={() => setNotificationsOpen(!notificationsOpen)}>
               <Bell size={17} />
-              {lowStock > 0 && <i />}
+              {alertCount > 0 && <i />}
             </button>
-            <button className="btn btn-primary" onClick={() => navigate("pos")}>New order</button>
+            <button className="btn btn-primary" onClick={() => navigate(profile.primaryAction.module)}>{profile.primaryAction.label}</button>
           </div>
           {notificationsOpen && (
             <div className="notification-popover">
               <header><strong>Notifications</strong><button onClick={() => setNotificationsOpen(false)}><X size={15} /></button></header>
-              {lowStock > 0 ? (
+              {stockAlerts && lowStock > 0 ? (
                 <div>
                   <span className="red">!</span>
                   <p><b>{lowStock} low-stock item{lowStock === 1 ? "" : "s"}</b><small>Review inventory levels</small></p>
                 </div>
+              ) : !stockAlerts && openOrders > 0 ? (
+                <div>
+                  <span className="red">!</span>
+                  <p><b>{openOrders} open order{openOrders === 1 ? "" : "s"}</b><small>Waiting on the queue</small></p>
+                </div>
               ) : (
                 <div>
                   <span className="green">✓</span>
-                  <p><b>No alerts right now</b><small>Stock and orders look clear</small></p>
+                  <p><b>No alerts right now</b><small>{stockAlerts ? "Stock and orders look clear" : "The queue looks clear"}</small></p>
                 </div>
               )}
-              <button onClick={() => { navigate("inventory"); setNotificationsOpen(false); }}>View inventory</button>
+              <button onClick={() => { navigate(stockAlerts ? "inventory" : "orders"); setNotificationsOpen(false); }}>{stockAlerts ? "View inventory" : "Open orders"}</button>
             </div>
           )}
         </header>
@@ -222,7 +264,7 @@ export default function CafeApp() {
             ) : (
               <>
                 <p>Quick navigation</p>
-                {navigation.map((item) => {
+                {visibleNav.map((item) => {
                   const Icon = item.icon;
                   return (
                     <button key={item.id} onClick={() => navigate(item.id)}>
@@ -241,15 +283,18 @@ export default function CafeApp() {
 
       <Modal open={helpOpen} onClose={() => setHelpOpen(false)} title="Help centre" wide>
         <div className="help-centre-copy">
-          <h3>Add a product</h3>
-          <p>Open <strong>Menu & recipes</strong>, choose <strong>Add product</strong>, set category, price, and optional modifier groups. Link recipes under the Recipes tab so sales deduct stock.</p>
-          <h3>Take an order</h3>
-          <p>Use <strong>Point of sale</strong> to pick items, attach a customer for loyalty, apply discounts or tips, then charge via card, cash, QR, or split payment.</p>
-          <h3>Manage inventory</h3>
-          <p>In <strong>Inventory</strong>, add stock with unit cost, record waste, create purchase orders, and run counts when shelves change.</p>
-          <button type="button" className="btn btn-primary" onClick={() => { setHelpOpen(false); navigate("settings"); }}>Open settings</button>
+          {helpTopics.map((topic) => (
+            <div key={topic.title}>
+              <h3>{topic.title}</h3>
+              <p>{topic.body}</p>
+            </div>
+          ))}
+          <button type="button" className="btn btn-primary" onClick={() => { setHelpOpen(false); navigate(canAccess(role, "settings") ? "settings" : profile.primaryAction.module); }}>
+            {canAccess(role, "settings") ? "Open settings" : profile.primaryAction.label}
+          </button>
         </div>
       </Modal>
     </div>
+    </RoleProvider>
   );
 }
