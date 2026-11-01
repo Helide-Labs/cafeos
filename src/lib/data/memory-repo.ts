@@ -1013,15 +1013,20 @@ export async function patchModifierGroup(id: string, patch: Partial<Omit<Modifie
   });
 }
 
-export async function deleteModifierGroup(id: string): Promise<void> {
+export async function deleteModifierGroup(id: string, name?: string): Promise<void> {
   const { tenantId, branchId } = scope();
   withMemoryDb((db) => {
     const branch = requireBranch(db, tenantId, branchId);
-    if (!branch.modifiers[id]) throw new Error("Modifier group not found");
-    delete branch.modifiers[id];
+    let resolved = id;
+    if (!branch.modifiers[resolved] && name) {
+      const matches = Object.entries(branch.modifiers).filter(([, item]) => item.name === name);
+      if (matches.length === 1) resolved = matches[0][0];
+    }
+    if (!branch.modifiers[resolved]) throw new Error("Modifier group not found");
+    delete branch.modifiers[resolved];
     for (const product of Object.values(branch.products)) {
       if (product.modifierGroupIds) {
-        product.modifierGroupIds = product.modifierGroupIds.filter((groupId) => groupId !== id);
+        product.modifierGroupIds = product.modifierGroupIds.filter((groupId) => groupId !== resolved && groupId !== id);
       }
     }
   });

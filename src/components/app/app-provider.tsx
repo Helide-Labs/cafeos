@@ -64,7 +64,7 @@ type AppContextValue = AppState & {
   removeRecipe: (productId: string) => Promise<void>;
   createModifierGroup: (input: Omit<ModifierGroup, "id">) => Promise<void>;
   updateModifierGroup: (id: string, patch: Partial<Omit<ModifierGroup, "id">>) => Promise<void>;
-  removeModifierGroup: (id: string) => Promise<void>;
+  removeModifierGroup: (id: string, name?: string) => Promise<void>;
   createFeedback: (input: { customerName: string; rating: number; comment?: string }) => Promise<void>;
   createCampaign: (input: { title: string; audience: string; offer: string; status?: Campaign["status"] }) => Promise<void>;
   updateCampaign: (id: string, patch: Partial<Campaign>) => Promise<void>;
@@ -113,7 +113,10 @@ async function readJson<T>(response: Response): Promise<T> {
     const payload = await response.json().catch(() => ({}));
     throw new Error((payload as { error?: string }).error || `Request failed (${response.status})`);
   }
-  return response.json() as Promise<T>;
+  if (response.status === 204) return undefined as T;
+  const text = await response.text();
+  if (!text) return undefined as T;
+  return JSON.parse(text) as T;
 }
 
 async function api<T>(url: string, init?: RequestInit): Promise<T> {
@@ -266,8 +269,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await api(`/api/modifiers/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
         await refresh();
       },
-      async removeModifierGroup(id) {
-        await api(`/api/modifiers/${id}`, { method: "DELETE" });
+      async removeModifierGroup(id, name) {
+        const query = name ? `?name=${encodeURIComponent(name)}` : "";
+        await api(`/api/modifiers/${encodeURIComponent(id)}${query}`, { method: "DELETE" });
         await refresh();
       },
       async createFeedback(input) {

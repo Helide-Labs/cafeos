@@ -296,17 +296,19 @@ export function PosModule({ toast }: { toast: ToastFn }) {
           </div>
         )}
         {paymentStep === "cash" && (
-          <div className="form-grid">
-            <label className="span-2">Amount tendered<input type="number" min={0} value={amountTendered} onChange={(e) => setAmountTendered(e.target.value)} autoFocus /></label>
+          <div className="payment-form">
+            <label>Amount tendered<input type="number" min={0} value={amountTendered} onChange={(e) => setAmountTendered(e.target.value)} autoFocus /></label>
             <p>Change due: <strong>{currency} {Math.max(0, (Number(amountTendered) || 0) - due).toLocaleString()}</strong></p>
             <button type="button" className="btn btn-primary btn-full" onClick={confirmCashPayment}>Complete cash sale</button>
             <button type="button" className="btn btn-secondary btn-full" onClick={() => setPaymentStep("choose")}>Back</button>
           </div>
         )}
         {paymentStep === "split" && (
-          <div className="form-grid">
-            <label>Cash portion<input type="number" min={0} value={splitCash} onChange={(e) => setSplitCash(e.target.value)} /></label>
-            <label>Card portion<input type="number" min={0} value={splitCard} onChange={(e) => setSplitCard(e.target.value)} /></label>
+          <div className="payment-form">
+            <div className="payment-split">
+              <label>Cash portion<input type="number" min={0} value={splitCash} onChange={(e) => setSplitCash(e.target.value)} /></label>
+              <label>Card portion<input type="number" min={0} value={splitCard} onChange={(e) => setSplitCard(e.target.value)} /></label>
+            </div>
             <p>Total: <strong>{currency} {(Number(splitCash) || 0) + (Number(splitCard) || 0)}</strong> (need {currency} {due.toLocaleString()})</p>
             <button type="button" className="btn btn-primary btn-full" onClick={confirmSplitPayment}>Complete split sale</button>
             <button type="button" className="btn btn-secondary btn-full" onClick={() => setPaymentStep("choose")}>Back</button>
@@ -398,7 +400,7 @@ export function OrdersModule({ toast }: { toast: ToastFn }) {
     ) : view === "kds" ? (
       <div className="kds-board">{["Received", "Preparing", "Ready"].map((status) => <section className="kds-column" key={status}><div className="kds-head"><div><i className={`kds-dot ${status.toLowerCase()}`} /><strong>{status}</strong></div><span>{orders.filter((order) => order.status === status).length}</span></div>{orders.filter((order) => order.status === status).map((order) => <article className="kds-ticket" key={order.id}><div><strong>{order.number}</strong><StatusBadge tone={order.type}>{order.type}</StatusBadge></div><h3>{order.customer}</h3><ul className="kds-lines">{(order.lines?.length ? order.lines : [{ name: `${order.items} items`, quantity: order.items, modifiers: [] as string[], price: 0, productId: null }]).map((line, index) => <li key={`${order.id}-${index}`}><strong>{line.quantity}× {line.name}</strong>{line.modifiers?.length ? <small>{line.modifiers.join(" · ")}</small> : null}</li>)}</ul><footer><span><Clock3 size={13} />{order.placedAt}</span><button onClick={() => advance(order.id, order.number)}>{nextLabel[order.status]}<ChevronRight size={14} /></button></footer></article>)}</section>)}</div>
     ) : (
-      <div className="data-table panel"><div className="table-head"><span>Order</span><span>Customer</span><span>Channel</span><span>Items</span><span>Total</span><span>Status</span><span /></div>{shown.map((order) => <div className="table-row" key={order.id}><button type="button" className="linkish" onClick={() => setDetailOrder(order)}><strong>{order.number}</strong></button><span>{order.customer}</span><span>{order.type}</span><span>{order.items}</span><b>{currency} {order.total.toLocaleString()}</b><StatusBadge tone={order.status}>{order.status}</StatusBadge><span>{order.status !== "Completed" && order.status !== "Refunded" ? <button onClick={() => advance(order.id, order.number)}>{nextLabel[order.status]}</button> : null}{order.status !== "Refunded" ? <button onClick={() => void refund(order.id, order.number)}>Refund</button> : null}</span></div>)}</div>
+      <div className="data-table orders-table panel"><div className="table-head"><span>Order</span><span>Customer</span><span>Channel</span><span>Items</span><span>Total</span><span>Status</span><span>Actions</span></div>{shown.map((order) => <div className="table-row" key={order.id}><button type="button" className="linkish" onClick={() => setDetailOrder(order)}><strong>{order.number}</strong></button><span>{order.customer}</span><span>{order.type}</span><span>{order.items}</span><b>{currency} {order.total.toLocaleString()}</b><StatusBadge tone={order.status}>{order.status}</StatusBadge><span className="row-actions">{order.status !== "Completed" && order.status !== "Refunded" ? <button type="button" onClick={() => advance(order.id, order.number)}>{nextLabel[order.status]}</button> : null}{order.status !== "Refunded" ? <button type="button" onClick={() => void refund(order.id, order.number)}>Refund</button> : null}</span></div>)}</div>
     )}
 
     <Modal open={!!detailOrder} onClose={() => setDetailOrder(null)} title={detailOrder ? `Order ${detailOrder.number}` : "Order"} wide>
@@ -691,11 +693,11 @@ export function MenuModule({ toast }: { toast: ToastFn }) {
     {tab === "Categories" && (
       <article className="panel settings-panel">
         <div className="settings-title"><h2>Menu categories</h2><p>Categories appear in POS filters and product composer.</p></div>
-        <div className="form-grid">
-          <label className="span-2">Add category<input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Seasonal specials" /></label>
+        <div className="inline-action">
+          <label>Add category<input value={newCategory} onChange={(e) => setNewCategory(e.target.value)} placeholder="Seasonal specials" onKeyDown={(event) => { if (event.key === "Enter" && newCategory.trim()) { event.preventDefault(); void saveCategoriesList([...settings.categories, newCategory.trim()]); setNewCategory(""); } }} /></label>
+          <button type="button" className="btn btn-secondary" onClick={() => { if (!newCategory.trim()) return; void saveCategoriesList([...settings.categories, newCategory.trim()]); setNewCategory(""); }}>Add category</button>
         </div>
-        <button className="btn btn-secondary" onClick={() => { if (!newCategory.trim()) return; void saveCategoriesList([...settings.categories, newCategory.trim()]); setNewCategory(""); }}>Add category</button>
-        <div className="data-table">
+        <div className="data-table categories-table">
           <div className="table-head"><span>Category</span><span /></div>
           {settings.categories.map((category) => (
             <div className="table-row" key={category}>
@@ -712,16 +714,16 @@ export function MenuModule({ toast }: { toast: ToastFn }) {
         {modifierGroups.length === 0 ? (
           <div className="placeholder-panel panel"><h2>No modifier groups</h2><p>Create size, milk, or topping groups for POS customization.</p></div>
         ) : (
-          <div className="data-table panel">
-            <div className="table-head"><span>Group</span><span>Options</span><span>Applies to</span><span /></div>
+          <div className="data-table modifiers-table panel">
+            <div className="table-head"><span>Group</span><span>Options</span><span>Applies to</span><span>Actions</span></div>
             {modifierGroups.map((group) => (
-              <div className="table-row" key={group.id}>
+              <div className="table-row" key={group.id || group.name}>
                 <strong>{group.name}{group.single ? " · single" : ""}</strong>
                 <span>{group.options.map((option) => `${option.name} (+${option.price})`).join(", ")}</span>
                 <span>{group.appliesTo.join(", ") || "All (via product link)"}</span>
-                <span>
-                  <button onClick={() => { setModifierForm({ name: group.name, single: group.single, optionsText: group.options.map((option) => `${option.name}|${option.price}`).join("\n"), appliesTo: group.appliesTo.join(", ") }); setModifierModal(group); }}>Edit</button>
-                  <button onClick={() => void removeModifierGroup(group.id).then(() => toast("Modifier group removed")).catch((error) => toast(error instanceof Error ? error.message : "Could not remove"))}>Remove</button>
+                <span className="row-actions">
+                  <button type="button" onClick={() => { setModifierForm({ name: group.name, single: group.single, optionsText: group.options.map((option) => `${option.name}|${option.price}`).join("\n"), appliesTo: group.appliesTo.join(", ") }); setModifierModal(group); }}>Edit</button>
+                  <button type="button" onClick={() => void removeModifierGroup(group.id, group.name).then(() => toast("Modifier group removed")).catch((error) => toast(error instanceof Error ? error.message : "Could not remove"))}>Remove</button>
                 </span>
               </div>
             ))}
@@ -746,7 +748,7 @@ export function MenuModule({ toast }: { toast: ToastFn }) {
           <article className="panel recipe-detail">
             <div className="panel-head"><div><p>Recipe</p><h2>{selectedRecipeProduct?.name}</h2></div><button className="btn btn-secondary" onClick={addRecipeLine}><Plus size={15} />Add line</button></div>
             {stock.length === 0 ? <p>Add stock in Inventory to build recipe lines.</p> : (
-              <div className="data-table">
+              <div className="data-table recipe-editor-table">
                 <div className="table-head"><span>Ingredient</span><span>Quantity</span><span /></div>
                 {recipeLines.map((line, index) => (
                   <div className="table-row" key={`${line.stockId}-${index}`}>
@@ -754,14 +756,14 @@ export function MenuModule({ toast }: { toast: ToastFn }) {
                       {stock.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
                     </select>
                     <input type="number" min={0} step={0.01} value={line.quantity} onChange={(e) => setRecipeLines((current) => current.map((entry, i) => i === index ? { ...entry, quantity: Number(e.target.value) || 0 } : entry))} />
-                    <button onClick={() => setRecipeLines((current) => current.filter((_, i) => i !== index))}><Trash2 size={14} /></button>
+                    <button type="button" aria-label="Remove ingredient" onClick={() => setRecipeLines((current) => current.filter((_, i) => i !== index))}><Trash2 size={14} /></button>
                   </div>
                 ))}
               </div>
             )}
-            <label className="span-2">Notes<textarea rows={2} value={recipeNotes} onChange={(e) => setRecipeNotes(e.target.value)} /></label>
-            <p>Estimated COGS: <strong>{currency} {recipeCostFromStock(recipeLines, stock).toLocaleString()}</strong></p>
-            <div className="product-image-actions">
+            <label className="recipe-notes">Notes<textarea rows={3} value={recipeNotes} onChange={(e) => setRecipeNotes(e.target.value)} /></label>
+            <p className="recipe-cogs">Estimated COGS: <strong>{currency} {recipeCostFromStock(recipeLines, stock).toLocaleString()}</strong></p>
+            <div className="recipe-actions">
               <button className="btn btn-primary" onClick={() => void saveRecipeForProduct()}>Save recipe</button>
               {recipes.some((recipe) => recipe.productId === activeRecipeProductId) && selectedRecipeProduct ? (
                 <button className="btn btn-secondary" type="button" onClick={() => void removeRecipe(selectedRecipeProduct.id).then(() => { setRecipeLines([]); setRecipeNotes(""); toast("Recipe cleared"); }).catch((error) => toast(error instanceof Error ? error.message : "Could not clear recipe"))}>Clear recipe</button>
@@ -1091,7 +1093,7 @@ export function InventoryModule({ toast }: { toast: ToastFn }) {
                   <span>{entry.supplier || "—"}</span>
                   <b className={entry.trend > 4 ? "danger-text" : ""}>{entry.trend > 0 ? "↗" : entry.trend < 0 ? "↘" : "—"} {Math.abs(entry.trend)}%</b>
                   <StatusBadge tone={low ? "low" : "healthy"}>{low ? "Low stock" : "Healthy"}</StatusBadge>
-                  <span><button onClick={() => setAdjusting(entry.id)}>Adjust</button><button onClick={() => openEditStock(entry)}>Edit</button></span>
+                  <span className="row-actions"><button type="button" onClick={() => setAdjusting(entry.id)}>Adjust</button><button type="button" onClick={() => openEditStock(entry)}>Edit</button></span>
                 </div>
               );
             })}

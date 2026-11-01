@@ -1147,10 +1147,22 @@ export async function patchModifierGroup(
   return mapModifierGroup(id, next);
 }
 
-export async function deleteModifierGroup(id: string): Promise<void> {
+export async function deleteModifierGroup(id: string, name?: string): Promise<void> {
   const { tenantId, branchId } = scope();
-  const ref = col(tenantId, branchId, "modifiers").doc(id);
-  const existing = await ref.get();
+  const modifiers = col(tenantId, branchId, "modifiers");
+  let resolved = id.trim();
+  let ref = modifiers.doc(resolved);
+  let existing = await ref.get();
+
+  if (!existing.exists && name) {
+    const matches = await modifiers.where("name", "==", name).limit(2).get();
+    if (matches.size === 1) {
+      ref = matches.docs[0].ref;
+      resolved = matches.docs[0].id;
+      existing = matches.docs[0];
+    }
+  }
+
   if (!existing.exists) throw new Error("Modifier group not found");
 
   const productsSnap = await col(tenantId, branchId, "products").get();
@@ -1158,10 +1170,10 @@ export async function deleteModifierGroup(id: string): Promise<void> {
   batch.delete(ref);
   for (const doc of productsSnap.docs) {
     const product = doc.data() as ProductDoc;
-    if (product.modifierGroupIds?.includes(id)) {
+    if (product.modifierGroupIds?.some((groupId) => groupId === resolved || groupId === id)) {
       batch.set(doc.ref, {
         ...product,
-        modifierGroupIds: product.modifierGroupIds.filter((groupId) => groupId !== id),
+        modifierGroupIds: product.modifierGroupIds.filter((groupId) => groupId !== resolved && groupId !== id),
         updatedAt: nowIso(),
       } satisfies ProductDoc);
     }

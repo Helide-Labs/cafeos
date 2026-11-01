@@ -16,11 +16,15 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_request: Request, { params }: Params) {
+export async function DELETE(request: Request, { params }: Params) {
   try {
-    const { id } = await params;
-    await deleteModifierGroup(id);
-    return new NextResponse(null, { status: 204 });
+    const { id: paramId } = await params;
+    const url = new URL(request.url);
+    const pathId = decodeURIComponent(url.pathname.split("/").filter(Boolean).pop() ?? "");
+    const id = (paramId || pathId).trim();
+    const name = url.searchParams.get("name")?.trim() || undefined;
+    await deleteModifierGroup(id, name);
+    return NextResponse.json({ ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to delete modifier group";
     const status = message.includes("not found") ? 404 : 500;

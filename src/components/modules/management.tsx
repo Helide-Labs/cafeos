@@ -97,13 +97,56 @@ function dailyBuckets(orders: Order[], range: string) {
   const labels =
     dayCount <= 7
       ? days.map((d) => d.toLocaleDateString(undefined, { weekday: "short" }))
-      : days.map((d) => d.toLocaleDateString(undefined, { month: "numeric", day: "numeric" }));
+      : days.map((d) => `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`);
   return { values, labels };
 }
 
-function exportOrdersCsv(orders: Order[], currency: string) {
+function orderSequence(order: Order) {
+  const digits = order.number.replace(/\D/g, "");
+  return Number(digits) || 0;
+}
+
+function formatPlacedTime(iso: string, timeZone: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: timeZone || "Asia/Colombo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const pick = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
+  const hour = pick("hour") === "24" ? "00" : pick("hour");
+  return `${pick("year")}-${pick("month")}-${pick("day")} ${hour}:${pick("minute")}:${pick("second")}`;
+}
+
+function largestRemainder(counts: number[]) {
+  const total = counts.reduce((sum, count) => sum + count, 0);
+  if (total <= 0) return counts.map(() => 0);
+  const exact = counts.map((count) => (count / total) * 100);
+  const floors = exact.map((value) => Math.floor(value));
+  let leftover = 100 - floors.reduce((sum, value) => sum + value, 0);
+  const order = exact
+    .map((value, index) => ({ index, fraction: value - Math.floor(value) }))
+    .sort((a, b) => b.fraction - a.fraction || a.index - b.index);
+  const result = [...floors];
+  for (const entry of order) {
+    if (leftover <= 0) break;
+    result[entry.index] += 1;
+    leftover -= 1;
+  }
+  return result;
+}
+
+function exportOrdersCsv(orders: Order[], timeZone: string) {
   const header = ["Number", "Customer", "Type", "Status", "Items", "Subtotal", "Tax", "Total", "Payment", "Placed"];
-  const rows = orders.map((order) => [
+  const rows = [...orders]
+    .sort((a, b) => orderSequence(a) - orderSequence(b))
+    .map((order) => [
     order.number,
     order.customer,
     order.type,
@@ -113,7 +156,7 @@ function exportOrdersCsv(orders: Order[], currency: string) {
     String(order.tax),
     String(order.total),
     order.paymentMethod,
-    order.placedAtIso,
+    formatPlacedTime(order.placedAtIso, timeZone),
   ]);
   const csv = [header, ...rows].map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -351,7 +394,7 @@ export function CustomersModule({ toast }: { toast: ToastFn }) {
               <small>Use positive values to award points and negative values to redeem.</small>
             </div>
           </article>
-          <article className="panel settings-panel">
+          <article className="panel settings-panel bounded-form">
             <div className="form-grid">
               <label>
                 Customer
@@ -368,7 +411,7 @@ export function CustomersModule({ toast }: { toast: ToastFn }) {
 
       {tab === "Campaigns" && (
         <>
-          <article className="panel settings-panel">
+          <article className="panel settings-panel bounded-form">
             <div className="settings-title"><h2>New campaign</h2><p>Create an offer and activate when ready.</p></div>
             <div className="form-grid">
               <label className="span-2">Title<input value={campaignForm.title} onChange={(e) => setCampaignForm({ ...campaignForm, title: e.target.value })} placeholder="Weekend coffee boost" /></label>
@@ -403,7 +446,7 @@ export function CustomersModule({ toast }: { toast: ToastFn }) {
 
       {tab === "Feedback" && (
         <>
-          <article className="panel settings-panel">
+          <article className="panel settings-panel bounded-form">
             <div className="settings-title"><h2>Submit feedback</h2><p>Log guest ratings from the counter or follow-up calls.</p></div>
             <div className="form-grid">
               <label>Guest name<input value={feedbackForm.customerName} onChange={(e) => setFeedbackForm({ ...feedbackForm, customerName: e.target.value })} /></label>
@@ -661,14 +704,17 @@ export function ReportsModule({ toast }: { toast: ToastFn }) {
   const dineIn = filtered.filter((order) => order.type === "Dine in").length;
   const pickup = filtered.filter((order) => order.type === "Pickup").length;
   const delivery = filtered.filter((order) => order.type === "Delivery").length;
-  const totalOrders = filtered.length || 1;
+  const [dinePct, pickupPct, deliveryPct] = largestRemainder([dineIn, pickup, delivery]);
+  const dineEnd = dinePct;
+  const pickupEnd = dinePct + pickupPct;
 
   function exportCsv() {
-    if (!filtered.length) {
+    const exportable = ordersInRange(orders, range);
+    if (!exportable.length) {
       toast("No orders in this range to export");
       return;
     }
-    exportOrdersCsv(filtered, currency);
+    exportOrdersCsv(exportable, settings.timezone);
     toast("CSV downloaded");
   }
 
@@ -705,11 +751,24 @@ export function ReportsModule({ toast }: { toast: ToastFn }) {
         </article>
         <article className="panel channel-panel">
           <div className="panel-head"><div><p>Order channels</p><h3>{filtered.length} orders</h3></div></div>
-          <ul>
-            <li><i className="dine" />Dine in <strong>{Math.round((dineIn / totalOrders) * 100)}%</strong></li>
-            <li><i className="pickup" />Pickup <strong>{Math.round((pickup / totalOrders) * 100)}%</strong></li>
-            <li><i className="delivery" />Delivery <strong>{Math.round((delivery / totalOrders) * 100)}%</strong></li>
-          </ul>
+          <div className="channel-visual">
+            <div
+              className="channel-donut"
+              style={{
+                background: filtered.length
+                  ? `conic-gradient(#356859 0 ${dineEnd}%, #d09a50 ${dineEnd}% ${pickupEnd}%, #7896a1 ${pickupEnd}% 100%)`
+                  : "#e6e8e3",
+              }}
+              aria-hidden
+            >
+              <div><strong>{filtered.length}</strong><span>orders</span></div>
+            </div>
+            <ul className="channel-legend">
+              <li><i className="dine" />Dine in<strong>{dinePct}%</strong></li>
+              <li><i className="pickup" />Pickup<strong>{pickupPct}%</strong></li>
+              <li><i className="delivery" />Delivery<strong>{deliveryPct}%</strong></li>
+            </ul>
+          </div>
         </article>
       </div>
     </div>
@@ -877,9 +936,8 @@ export function SettingsModule({ toast }: { toast: ToastFn }) {
                 <label>Service charge (%)<input type="number" min={0} step={0.1} value={serviceChargePercent} onChange={(e) => setServiceChargePercent(e.target.value)} /></label>
                 <label>Currency<select value={currency} onChange={(e) => setCurrency(e.target.value)}><option>LKR</option><option>USD</option><option>EUR</option><option>GBP</option></select></label>
               </div>
-              <p><small>Menu categories (comma-separated)</small></p>
-              <label className="span-2"><textarea rows={2} value={categoriesText} onChange={(e) => setCategoriesText(e.target.value)} /></label>
-              <button className="btn btn-secondary" onClick={() => void saveCategories()}>Update categories only</button>
+              <label className="span-2">Menu categories (comma-separated)<textarea rows={4} value={categoriesText} onChange={(e) => setCategoriesText(e.target.value)} /></label>
+              <div className="span-2"><button type="button" className="btn btn-secondary" onClick={() => void saveCategories()}>Update categories only</button></div>
             </>
           )}
           {tab === "Integrations" && (
