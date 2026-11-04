@@ -147,12 +147,12 @@ export default function CafeApp() {
           <button
             className="brand-mark-btn"
             onClick={() => collapsed && setCollapsed(false)}
-            aria-label={collapsed ? "Expand sidebar" : "CaféOS"}
+            aria-label={collapsed ? "Expand sidebar" : "Caflix"}
             type="button"
           >
             <Coffee size={19} />
           </button>
-          <strong>CaféOS</strong>
+          <strong>Caflix</strong>
           <button
             className="sidebar-toggle"
             onClick={() => setCollapsed(!collapsed)}
@@ -236,7 +236,7 @@ export default function CafeApp() {
           )}
         </header>
         <main className="prototype-content">
-          {!hydrated && <div className="placeholder-panel panel"><h2>Loading CaféOS…</h2><p>Connecting to your café data.</p></div>}
+          {!hydrated && <div className="placeholder-panel panel"><h2>Loading Caflix…</h2><p>Connecting to your café data.</p></div>}
           {hydrated && error && (
             <div className="placeholder-panel panel">
               <h2>Backend unavailable</h2>
@@ -251,7 +251,7 @@ export default function CafeApp() {
       {searchOpen && (
         <div className="command-backdrop" onMouseDown={() => { setSearchOpen(false); setSearchQuery(""); }}>
           <div className="command-panel" onMouseDown={(e) => e.stopPropagation()}>
-            <label><Search size={18} /><input autoFocus value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search CaféOS…" /></label>
+            <label><Search size={18} /><input autoFocus value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search Caflix…" /></label>
             {searchQuery.trim() ? (
               <>
                 <p>Results</p>

@@ -93,7 +93,7 @@ export const ROLE_AREAS: { area: string; allow: (role: AppRole) => boolean }[] =
   { area: "Refunds", allow: (role) => ROLE_PROFILES[role].canRefund },
 ];
 
-const ROLE_STORAGE_KEY = "cafeos-active-role";
+const ROLE_STORAGE_KEY = "caflix-active-role";
 
 export function canAccess(role: AppRole, module: ModuleId) {
   return ROLE_PROFILES[role].modules.includes(module);

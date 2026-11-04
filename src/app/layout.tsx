@@ -15,7 +15,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "CaféOS — Your café, in one place",
+  title: "Caflix — Your café, in one place",
   description:
     "An intelligent operating system for modern cafés, from first order to final margin.",
 };

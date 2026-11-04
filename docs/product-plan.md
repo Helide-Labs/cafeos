@@ -1,8 +1,8 @@
-# CaféOS product plan
+# Caflix product plan
 
 ## Product direction
 
-CaféOS is a multi-tenant operating system for cafés. Its advantage is not the number of modules; it is the connected data chain from sale to recipe, stock, supplier cost, profit, and actionable recommendations.
+Caflix is a multi-tenant operating system for cafés. Its advantage is not the number of modules; it is the connected data chain from sale to recipe, stock, supplier cost, profit, and actionable recommendations.
 
 Primary users are independent café owners, growing multi-branch operators, managers, cashiers, baristas, kitchen staff, and inventory teams. The initial market assumptions are LKR pricing, Sri Lankan payments, and mobile-first owner access.
 

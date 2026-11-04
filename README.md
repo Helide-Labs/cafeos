@@ -1,4 +1,4 @@
-# CaféOS
+# Caflix
 
 Multi-tenant café operating system. Phase 1 focuses on the connected sale → recipe → stock → profit chain.
 

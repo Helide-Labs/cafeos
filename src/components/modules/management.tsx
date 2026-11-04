@@ -165,7 +165,7 @@ function exportOrdersCsv(orders: Order[], timeZone: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `cafeos-orders-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.download = `caflix-orders-${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
   URL.revokeObjectURL(url);
 }
@@ -980,7 +980,7 @@ export function SettingsModule({ toast }: { toast: ToastFn }) {
             <>
               <div className="settings-title"><h2>Audit log</h2><p>Recent activity across orders, stock, and team.</p></div>
               {activities.length === 0 ? (
-                <div className="placeholder-panel embedded"><p>Activity will appear as your team uses CaféOS.</p></div>
+                <div className="placeholder-panel embedded"><p>Activity will appear as your team uses Caflix.</p></div>
               ) : (
                 <div className="activity-list">
                   {activities.map((item) => (
