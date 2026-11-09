@@ -26,6 +26,7 @@ import {
   toDbSegment,
 } from "@/lib/firestore/mappers";
 import type {
+  AccountDoc,
   ActivityDoc,
   BranchDoc,
   CampaignDoc,
@@ -57,6 +58,7 @@ import type {
   Product,
   PurchaseOrder,
   Recipe,
+  StaffAccount,
   StockItem,
   StockLedgerEntry,
   WasteRecord,
@@ -1123,5 +1125,73 @@ export async function deleteCampaign(id: string): Promise<void> {
     const branch = requireBranch(db, tenantId, branchId);
     if (!branch.campaigns[id]) throw new Error("Campaign not found");
     delete branch.campaigns[id];
+  });
+}
+
+function publicAccount(id: string, account: AccountDoc): StaffAccount {
+  return { id, name: account.name, username: account.username, role: account.role };
+}
+
+export async function listAccounts(): Promise<StaffAccount[]> {
+  const { tenantId, branchId } = scope();
+  return withMemoryDb((db) => {
+    const branch = getBranchData(db, tenantId, branchId);
+    if (!branch) return [];
+    return Object.entries(branch.accounts ?? {})
+      .map(([id, account]) => publicAccount(id, account))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  });
+}
+
+export async function getAccount(id: string): Promise<(StaffAccount & { passwordHash: string }) | null> {
+  const { tenantId, branchId } = scope();
+  return withMemoryDb((db) => {
+    const branch = getBranchData(db, tenantId, branchId);
+    const account = branch?.accounts?.[id];
+    if (!account) return null;
+    return { ...publicAccount(id, account), passwordHash: account.passwordHash };
+  });
+}
+
+export async function findAccountByUsername(username: string): Promise<(StaffAccount & { passwordHash: string }) | null> {
+  const key = username.trim().toLowerCase();
+  const { tenantId, branchId } = scope();
+  return withMemoryDb((db) => {
+    const branch = getBranchData(db, tenantId, branchId);
+    if (!branch?.accounts) return null;
+    const found = Object.entries(branch.accounts).find(([, account]) => account.username === key);
+    if (!found) return null;
+    const [id, account] = found;
+    return { ...publicAccount(id, account), passwordHash: account.passwordHash };
+  });
+}
+
+export async function insertAccount(input: { name: string; username: string; role: string; passwordHash: string }): Promise<StaffAccount> {
+  const { tenantId, branchId } = scope();
+  const username = input.username.trim().toLowerCase();
+  const id = newId("acc");
+  const data: AccountDoc = {
+    name: input.name.trim(),
+    username,
+    role: input.role,
+    passwordHash: input.passwordHash,
+    createdAt: nowIso(),
+  };
+  return withMemoryDb((db) => {
+    const branch = requireBranch(db, tenantId, branchId);
+    branch.accounts ??= {};
+    const taken = Object.values(branch.accounts).some((account) => account.username === username);
+    if (taken) throw new Error("Username is already in use");
+    branch.accounts[id] = data;
+    return publicAccount(id, data);
+  });
+}
+
+export async function deleteAccount(id: string): Promise<void> {
+  const { tenantId, branchId } = scope();
+  withMemoryDb((db) => {
+    const branch = requireBranch(db, tenantId, branchId);
+    if (!branch.accounts?.[id]) throw new Error("Account not found");
+    delete branch.accounts[id];
   });
 }

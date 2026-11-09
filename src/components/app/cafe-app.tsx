@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { TEAM_ROLES } from "@/lib/defaults";
-import { canAccess, readStoredRole, ROLE_PROFILES, storeRole, type AppRole } from "@/lib/roles";
+import { canAccess, ROLE_PROFILES, type AppRole } from "@/lib/roles";
+import type { StaffAccount } from "@/lib/types";
+import { AuthGate } from "./auth-gate";
 import { RoleProvider } from "./role-context";
+import { SESSION_KEY } from "./session";
 import {
   BarChart3,
   Bell,
@@ -61,6 +63,8 @@ export default function CafeApp() {
   const [toast, setToast] = useState("");
   const [helpOpen, setHelpOpen] = useState(false);
   const [role, setRole] = useState<AppRole>("Owner");
+  const [authMode, setAuthMode] = useState<"loading" | "setup" | "login" | "ready">("loading");
+  const [sessionUser, setSessionUser] = useState<StaffAccount | null>(null);
   const profile = ROLE_PROFILES[role];
   const visibleNav = navigation.filter((item) => canAccess(role, item.id));
 
@@ -74,19 +78,62 @@ export default function CafeApp() {
   }, [toast]);
 
   useEffect(() => {
-    const stored = readStoredRole();
-    setRole(stored);
+    let cancelled = false;
+    async function restore() {
+      try {
+        const status = await fetch("/api/auth/status", { cache: "no-store" }).then((response) => response.json());
+        if (cancelled) return;
+        if (status.needsSetup) {
+          setAuthMode("setup");
+          return;
+        }
+        const token = window.localStorage.getItem(SESSION_KEY);
+        if (!token) {
+          setAuthMode("login");
+          return;
+        }
+        const session = await fetch("/api/auth/session", { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" });
+        if (!session.ok) {
+          window.localStorage.removeItem(SESSION_KEY);
+          setAuthMode("login");
+          return;
+        }
+        const body = await session.json();
+        enter(body.user as StaffAccount);
+      } catch {
+        if (!cancelled) setAuthMode("login");
+      }
+    }
+    void restore();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  useEffect(() => {
-    if (!canAccess(role, active)) setActive("overview");
-  }, [active, role]);
-
-  function selectRole(next: AppRole) {
+  function enter(user: StaffAccount) {
+    const next = (user.role as AppRole) in ROLE_PROFILES ? (user.role as AppRole) : "Cashier";
+    setSessionUser({ ...user, role: next });
     setRole(next);
-    storeRole(next);
-    if (!canAccess(next, active)) setActive("overview");
+    setActive("overview");
+    setAuthMode("ready");
   }
+
+  function signIn(user: StaffAccount, token: string) {
+    window.localStorage.setItem(SESSION_KEY, token);
+    enter(user);
+  }
+
+  function signOut() {
+    window.localStorage.removeItem(SESSION_KEY);
+    setSessionUser(null);
+    setActive("overview");
+    setSearchOpen(false);
+    setAuthMode("login");
+  }
+
+  useEffect(() => {
+    if (authMode === "ready" && !canAccess(role, active)) setActive("overview");
+  }, [active, authMode, role]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -129,6 +176,10 @@ export default function CafeApp() {
     settings: <SettingsModule toast={setToast} />,
   }[active];
 
+  if (authMode !== "ready" || !sessionUser) {
+    return <AuthGate mode={authMode === "ready" ? "loading" : authMode} onReady={signIn} />;
+  }
+
   const helpTopics = [
     { title: "Add a product", body: "Open Menu & recipes, choose Add product, set category, price, and optional modifier groups. Link recipes under the Recipes tab so sales deduct stock.", module: "menu" as ModuleId },
     { title: "Take an order", body: "Use Point of sale to pick items, attach a customer for loyalty, apply discounts or tips, then charge via card, cash, QR, or split payment.", module: "pos" as ModuleId },
@@ -170,12 +221,13 @@ export default function CafeApp() {
           </div>
           <ChevronDown size={15} />
         </button>
-        <label className="role-switch">
-          <span>Role</span>
-          <select aria-label="Dashboard role" value={role} onChange={(event) => selectRole(event.target.value as AppRole)}>
-            {TEAM_ROLES.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-        </label>
+        <div className="signed-in-bar">
+          <div>
+            <span>Signed in</span>
+            <strong>{sessionUser.name}</strong>
+          </div>
+          <button type="button" onClick={signOut}>Sign out</button>
+        </div>
         <div className="sidebar-scroll">
           <p className="side-label">Workspace</p>
           <nav>

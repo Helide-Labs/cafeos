@@ -122,6 +122,26 @@ export async function deleteEmployee(...args: Parameters<typeof memoryRepo.delet
   return active().deleteEmployee(...args);
 }
 
+export async function listAccounts(...args: Parameters<typeof memoryRepo.listAccounts>) {
+  return active().listAccounts(...args);
+}
+
+export async function getAccount(...args: Parameters<typeof memoryRepo.getAccount>) {
+  return active().getAccount(...args);
+}
+
+export async function findAccountByUsername(...args: Parameters<typeof memoryRepo.findAccountByUsername>) {
+  return active().findAccountByUsername(...args);
+}
+
+export async function insertAccount(...args: Parameters<typeof memoryRepo.insertAccount>) {
+  return active().insertAccount(...args);
+}
+
+export async function deleteAccount(...args: Parameters<typeof memoryRepo.deleteAccount>) {
+  return active().deleteAccount(...args);
+}
+
 export async function listActivities(...args: Parameters<typeof memoryRepo.listActivities>) {
   return active().listActivities(...args);
 }

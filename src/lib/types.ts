@@ -89,6 +89,13 @@ export type Customer = {
   lastVisit: string;
 };
 
+export type StaffAccount = {
+  id: string;
+  name: string;
+  username: string;
+  role: string;
+};
+
 export type Employee = {
   id: string;
   name: string;

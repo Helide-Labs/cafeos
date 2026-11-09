@@ -120,6 +120,14 @@ export type EmployeeDoc = {
   updatedAt: string;
 };
 
+export type AccountDoc = {
+  name: string;
+  username: string;
+  role: string;
+  passwordHash: string;
+  createdAt: string;
+};
+
 export type ActivityDoc = {
   title: string;
   detail: string;

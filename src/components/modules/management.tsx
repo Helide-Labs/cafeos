@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   Bell,
   Check,
@@ -10,7 +10,6 @@ import {
   Pencil,
   Plus,
   Search,
-  ShieldCheck,
   Star,
   Trash2,
   UserPlus,
@@ -18,10 +17,11 @@ import {
 } from "lucide-react";
 import { useApp } from "@/components/app/app-provider";
 import { BarChart, Modal, SectionHeader, StatusBadge } from "@/components/ui/prototype-ui";
+import { authHeaders } from "@/components/app/session";
 import { useAppRole } from "@/components/app/role-context";
 import { TEAM_ROLES } from "@/lib/defaults";
-import { ROLE_AREAS, ROLE_PROFILES } from "@/lib/roles";
-import type { Campaign, Customer, Employee, Order } from "@/lib/types";
+import { ROLE_PROFILES } from "@/lib/roles";
+import type { Campaign, Customer, Employee, Order, StaffAccount } from "@/lib/types";
 
 type ToastFn = (message: string) => void;
 
@@ -593,7 +593,7 @@ export function TeamModule({ toast }: { toast: ToastFn }) {
         <article className="metric-card plain"><p>Labour today</p><strong>{Math.round(labourToday).toLocaleString()}</strong><small>Working staff · est. cost</small></article>
         <article className="metric-card plain"><p>Week labour</p><strong>{Math.round(weekLabour).toLocaleString()}</strong><small>hours × hourly rate</small></article>
       </div>
-      <div className="module-tabs">{["Schedule", "Employees", "Attendance", "Roles"].map((value) => <button className={tab === value ? "active" : ""} key={value} onClick={() => setTab(value)}>{value}</button>)}</div>
+      <div className="module-tabs">{["Schedule", "Employees", "Attendance"].map((value) => <button className={tab === value ? "active" : ""} key={value} onClick={() => setTab(value)}>{value}</button>)}</div>
 
       {tab === "Employees" && (
         employees.length === 0 ? (
@@ -649,26 +649,6 @@ export function TeamModule({ toast }: { toast: ToastFn }) {
             ))}
           </div>
         )
-      )}
-
-      {tab === "Roles" && (
-        <article className="panel settings-panel">
-          <div className="settings-title"><h2>Role permissions</h2><p>The sidebar and dashboard follow this matrix. Switch roles from the sidebar.</p></div>
-          <div className="data-table roles-table">
-            <div className="table-head"><span>Area</span>{TEAM_ROLES.map((role) => <span key={role}>{role}</span>)}</div>
-            {ROLE_AREAS.map((row) => (
-              <div className="table-row" key={row.area}>
-                <strong>{row.area}</strong>
-                {TEAM_ROLES.map((role) => <span key={role}>{row.allow(role) ? "✓" : "—"}</span>)}
-              </div>
-            ))}
-          </div>
-          <div className="roles-grid">
-            {TEAM_ROLES.map((role) => (
-              <article className="panel role-card" key={role}><ShieldCheck /><h3>{role}</h3><p>{ROLE_PROFILES[role].summary}</p></article>
-            ))}
-          </div>
-        </article>
       )}
 
       <Modal open={!!employeeModal} onClose={() => !saving && setEmployeeModal(null)} title={employeeModal === "add" ? "Add team member" : "Edit team member"}>
@@ -772,8 +752,87 @@ export function ReportsModule({ toast }: { toast: ToastFn }) {
   );
 }
 
+const STAFF_LOGIN_ROLES = TEAM_ROLES.filter((role) => role !== "Owner");
+
+function StaffLogins({ toast }: { toast: ToastFn }) {
+  const [accounts, setAccounts] = useState<StaffAccount[]>([]);
+  const [form, setForm] = useState({ name: "", username: "", password: "", role: "Cashier" });
+  const [saving, setSaving] = useState(false);
+
+  async function load() {
+    const response = await fetch("/api/auth/accounts", { headers: authHeaders(), cache: "no-store" });
+    if (!response.ok) return;
+    setAccounts(await response.json());
+  }
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  async function createAccount(event: FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const response = await fetch("/api/auth/accounts", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify(form),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error || "Could not create the account");
+      setForm({ name: "", username: "", password: "", role: "Cashier" });
+      toast("Login created. They will open their own dashboard.");
+      await load();
+    } catch (error) {
+      toast(error instanceof Error ? error.message : "Could not create the account");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeAccount(account: StaffAccount) {
+    if (!window.confirm(`Remove the login for ${account.name}?`)) return;
+    const response = await fetch(`/api/auth/accounts/${account.id}`, { method: "DELETE", headers: authHeaders() });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      toast(body.error || "Could not remove the account");
+      return;
+    }
+    toast("Login removed");
+    await load();
+  }
+
+  return (
+    <>
+      <div className="settings-title"><h2>Staff logins</h2><p>Only this main account can create logins. Each person opens their own dashboard after signing in.</p></div>
+      <form className="form-grid bounded-form" onSubmit={(event) => void createAccount(event)}>
+        <label>Name<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} required /></label>
+        <label>Username<input value={form.username} onChange={(event) => setForm({ ...form, username: event.target.value })} autoComplete="off" required /></label>
+        <label>Password<input type="password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} autoComplete="new-password" required /></label>
+        <label>Role
+          <select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>
+            {STAFF_LOGIN_ROLES.map((role) => <option key={role} value={role}>{role}</option>)}
+          </select>
+        </label>
+        <div className="span-2"><button className="btn btn-primary" type="submit" disabled={saving}>{saving ? "Creating…" : "Create login"}</button></div>
+      </form>
+      <div className="data-table staff-accounts" style={{ marginTop: 18 }}>
+        <div className="table-head"><span>Name</span><span>Username</span><span>Role</span><span /></div>
+        {accounts.map((account) => (
+          <div className="table-row" key={account.id}>
+            <strong>{account.name}</strong>
+            <span>{account.username}</span>
+            <span>{account.role === "Owner" ? "Main account" : account.role}</span>
+            <span>{account.role === "Owner" ? null : <button type="button" onClick={() => void removeAccount(account)}>Remove</button>}</span>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 export function SettingsModule({ toast }: { toast: ToastFn }) {
-  const { tenant, branch, settings, employees, activities, saveSettings, hydrated } = useApp();
+  const { tenant, branch, settings, activities, saveSettings, hydrated } = useApp();
   const [saved, setSaved] = useState(false);
   const [tab, setTab] = useState("Café");
   const [cafeName, setCafeName] = useState(tenant.name);
@@ -881,7 +940,7 @@ export function SettingsModule({ toast }: { toast: ToastFn }) {
     <div className="module-page">
       <SectionHeader title="Settings" description="Manage your café, team access and integrations" actions={<button className="btn btn-primary" disabled={saving} onClick={() => void save()}>{saved ? <Check size={15} /> : null}{saved ? "Saved" : saving ? "Saving…" : "Save changes"}</button>} />
       <div className="settings-layout">
-        <aside className="settings-nav">{["Café", "Branches", "Users & roles", "Payments", "Integrations", "Notifications", "Audit log"].map((item) => <button className={tab === item ? "active" : ""} key={item} onClick={() => setTab(item)}>{item}</button>)}</aside>
+        <aside className="settings-nav">{["Café", "Branches", "Staff logins", "Payments", "Integrations", "Notifications", "Audit log"].map((item) => <button className={tab === item ? "active" : ""} key={item} onClick={() => setTab(item)}>{item}</button>)}</aside>
         <section className="panel settings-panel">
           {tab === "Café" && (
             <>
@@ -905,26 +964,7 @@ export function SettingsModule({ toast }: { toast: ToastFn }) {
               </div>
             </>
           )}
-          {tab === "Users & roles" && (
-            <>
-              <div className="settings-title"><h2>Users & roles</h2><p>Team members on file for this café.</p></div>
-              {employees.length === 0 ? (
-                <div className="placeholder-panel embedded"><p>No employees yet. Add them from the Team module.</p></div>
-              ) : (
-                <div className="data-table">
-                  <div className="table-head"><span>Name</span><span>Role</span><span>Status</span><span>Shift</span></div>
-                  {employees.map((employee) => (
-                    <div className="table-row" key={employee.id}>
-                      <strong>{employee.name}</strong>
-                      <span>{employee.role}</span>
-                      <StatusBadge tone={employee.status}>{employee.status}</StatusBadge>
-                      <span>{employee.shift}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
+          {tab === "Staff logins" && <StaffLogins toast={toast} />}
           {tab === "Payments" && (
             <>
               <div className="settings-title"><h2>Payments & tax</h2><p>Tax and service charge applied at checkout.</p></div>

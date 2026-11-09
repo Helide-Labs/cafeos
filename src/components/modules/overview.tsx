@@ -59,7 +59,7 @@ export default function Overview({ navigate }: { navigate: (view: string) => voi
         description={copy.description}
         actions={
           <>
-            <span className="live-chip"><i />{role}</span>
+            <span className="live-chip"><i />Live</span>
             <button className="btn btn-primary" onClick={() => navigate(profile.primaryAction.module)}>{profile.primaryAction.label}</button>
           </>
         }

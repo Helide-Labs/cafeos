@@ -36,6 +36,7 @@ import {
 import { getDb } from "@/lib/firebase";
 import { computeOrderMoney } from "@/lib/money";
 import type {
+  AccountDoc,
   ActivityDoc,
   BranchDoc,
   CampaignDoc,
@@ -68,6 +69,7 @@ import type {
   Product,
   PurchaseOrder,
   Recipe,
+  StaffAccount,
   StockItem,
   StockLedgerEntry,
   WasteRecord,
@@ -1262,5 +1264,60 @@ export async function deleteCampaign(id: string): Promise<void> {
   const ref = col(tenantId, branchId, "campaigns").doc(id);
   const existing = await ref.get();
   if (!existing.exists) throw new Error("Campaign not found");
+  await ref.delete();
+}
+
+function publicAccount(id: string, account: AccountDoc): StaffAccount {
+  return { id, name: account.name, username: account.username, role: account.role };
+}
+
+export async function listAccounts(): Promise<StaffAccount[]> {
+  const { tenantId, branchId } = scope();
+  const snap = await col(tenantId, branchId, "accounts").get();
+  return snap.docs
+    .map((doc) => publicAccount(doc.id, doc.data() as AccountDoc))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export async function getAccount(id: string): Promise<(StaffAccount & { passwordHash: string }) | null> {
+  const { tenantId, branchId } = scope();
+  const doc = await col(tenantId, branchId, "accounts").doc(id).get();
+  if (!doc.exists) return null;
+  const account = doc.data() as AccountDoc;
+  return { ...publicAccount(doc.id, account), passwordHash: account.passwordHash };
+}
+
+export async function findAccountByUsername(username: string): Promise<(StaffAccount & { passwordHash: string }) | null> {
+  const key = username.trim().toLowerCase();
+  const { tenantId, branchId } = scope();
+  const snap = await col(tenantId, branchId, "accounts").where("username", "==", key).limit(1).get();
+  const doc = snap.docs[0];
+  if (!doc) return null;
+  const account = doc.data() as AccountDoc;
+  return { ...publicAccount(doc.id, account), passwordHash: account.passwordHash };
+}
+
+export async function insertAccount(input: { name: string; username: string; role: string; passwordHash: string }): Promise<StaffAccount> {
+  const { tenantId, branchId } = scope();
+  const username = input.username.trim().toLowerCase();
+  const existing = await col(tenantId, branchId, "accounts").where("username", "==", username).limit(1).get();
+  if (!existing.empty) throw new Error("Username is already in use");
+  const id = newId("acc");
+  const data: AccountDoc = {
+    name: input.name.trim(),
+    username,
+    role: input.role,
+    passwordHash: input.passwordHash,
+    createdAt: nowIso(),
+  };
+  await col(tenantId, branchId, "accounts").doc(id).set(data);
+  return publicAccount(id, data);
+}
+
+export async function deleteAccount(id: string): Promise<void> {
+  const { tenantId, branchId } = scope();
+  const ref = col(tenantId, branchId, "accounts").doc(id);
+  const existing = await ref.get();
+  if (!existing.exists) throw new Error("Account not found");
   await ref.delete();
 }

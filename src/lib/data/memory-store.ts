@@ -7,6 +7,7 @@ import type {
   CampaignDoc,
   CountersDoc,
   CustomerDoc,
+  AccountDoc,
   EmployeeDoc,
   FeedbackDoc,
   LedgerDoc,
@@ -28,6 +29,7 @@ export type BranchData = {
   stock: Record<string, StockDoc>;
   customers: Record<string, CustomerDoc>;
   employees: Record<string, EmployeeDoc>;
+  accounts: Record<string, AccountDoc>;
   activities: Record<string, ActivityDoc>;
   recipes: Record<string, RecipeDoc>;
   modifiers: Record<string, ModifierGroupDoc>;
@@ -55,6 +57,7 @@ function emptyBranch(branch: BranchDoc): BranchData {
     stock: {},
     customers: {},
     employees: {},
+    accounts: {},
     activities: {},
     recipes: {},
     modifiers: {},
@@ -82,6 +85,7 @@ function normalizeBranch(raw: Partial<BranchData> & { branch: BranchDoc }): Bran
     stock: raw.stock ?? {},
     customers: raw.customers ?? {},
     employees: raw.employees ?? {},
+    accounts: raw.accounts ?? {},
     activities: raw.activities ?? {},
     recipes: raw.recipes ?? {},
     modifiers: raw.modifiers ?? {},
