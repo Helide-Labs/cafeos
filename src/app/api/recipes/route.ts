@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
+import { canManageMenu, requireAccess } from "@/lib/auth-http";
 import { deleteRecipe, listRecipes, upsertRecipe } from "@/lib/data/repo";
 import type { Recipe } from "@/lib/types";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { error } = await requireAccess(request, canManageMenu, "Recipes are not available for this account");
+    if (error) return error;
     return NextResponse.json(await listRecipes());
   } catch (error) {
     return NextResponse.json(
@@ -15,6 +18,8 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
+    const { error } = await requireAccess(request, canManageMenu, "Recipes are not available for this account");
+    if (error) return error;
     const body = await request.json();
     const productId = String(body.productId ?? "").trim();
     const lines = Array.isArray(body.lines) ? body.lines : null;
@@ -39,6 +44,8 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const { error } = await requireAccess(request, canManageMenu, "Recipes are not available for this account");
+    if (error) return error;
     const productId = new URL(request.url).searchParams.get("productId")?.trim();
     if (!productId) {
       return NextResponse.json({ error: "productId query parameter is required" }, { status: 400 });

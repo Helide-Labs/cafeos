@@ -1329,30 +1329,6 @@
   grid-template-columns: 88px minmax(0, 1.2fr) minmax(0, 0.8fr) 64px 110px minmax(168px, auto);
 }
 
-.role-switch {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: 12px 0 4px;
-  color: #737c77;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.role-switch select {
-  height: 40px;
-  border: 1px solid #e3e5df;
-  border-radius: 10px;
-  background: #fff;
-  padding: 0 10px;
-  color: #1c2521;
-  font: 700 14px var(--font-manrope);
-  letter-spacing: 0;
-  text-transform: none;
-}
-
 .roles-table .table-head,
 .roles-table .table-row {
   grid-template-columns: minmax(140px, 1.4fr) repeat(5, minmax(72px, 1fr));

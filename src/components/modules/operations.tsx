@@ -1072,10 +1072,10 @@ export function InventoryModule({ toast }: { toast: ToastFn }) {
     <div className="module-page">
       <SectionHeader
         title="Inventory"
-        description="Real-time ingredient and packaging stock"
+        description={floorStock ? "Count stock and log waste on the floor" : "Real-time ingredient and packaging stock"}
         actions={
           <>
-            <button className="btn btn-secondary" onClick={openAddStock}><Plus size={15} />Add stock</button>
+            {!floorStock && <button className="btn btn-secondary" onClick={openAddStock}><Plus size={15} />Add stock</button>}
             <button className="btn btn-secondary" disabled={!stock.length} onClick={() => stock[0] && setAdjusting(stock[0].id)}><PackageCheck size={15} />Start count</button>
           </>
         }
@@ -1090,7 +1090,12 @@ export function InventoryModule({ toast }: { toast: ToastFn }) {
 
       {tab === "Stock" && (
         stock.length === 0 ? (
-          <div className="placeholder-panel panel"><PackageCheck size={28} /><h2>No stock items</h2><p>Add ingredients and packaging to track on-hand levels.</p><button className="btn btn-primary" onClick={openAddStock}>Add stock</button></div>
+          <div className="placeholder-panel panel">
+            <PackageCheck size={28} />
+            <h2>No stock items</h2>
+            <p>{floorStock ? "Ask a manager to add ingredients before you count stock." : "Add ingredients and packaging to track on-hand levels."}</p>
+            {!floorStock && <button className="btn btn-primary" onClick={openAddStock}>Add stock</button>}
+          </div>
         ) : (
           <div className="data-table inventory-table panel">
             <div className="table-head"><span>Ingredient</span><span>On hand</span><span>Minimum</span><span>Supplier</span><span>Cost trend</span><span>Status</span><span /></div>
@@ -1104,7 +1109,10 @@ export function InventoryModule({ toast }: { toast: ToastFn }) {
                   <span>{entry.supplier || "—"}</span>
                   <b className={entry.trend > 4 ? "danger-text" : ""}>{entry.trend > 0 ? "↗" : entry.trend < 0 ? "↘" : "—"} {Math.abs(entry.trend)}%</b>
                   <StatusBadge tone={low ? "low" : "healthy"}>{low ? "Low stock" : "Healthy"}</StatusBadge>
-                  <span className="row-actions"><button type="button" onClick={() => setAdjusting(entry.id)}>Adjust</button><button type="button" onClick={() => openEditStock(entry)}>Edit</button></span>
+                  <span className="row-actions">
+                    <button type="button" onClick={() => setAdjusting(entry.id)}>Adjust</button>
+                    {!floorStock && <button type="button" onClick={() => openEditStock(entry)}>Edit</button>}
+                  </span>
                 </div>
               );
             })}

@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
+import { canManageMenu, canReadCatalog, requireAccess } from "@/lib/auth-http";
 import { createModifierGroup, listModifierGroups } from "@/lib/data/repo";
 import type { ModifierGroup } from "@/lib/types";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { error } = await requireAccess(request, canReadCatalog, "Menu is not available for this account");
+    if (error) return error;
     return NextResponse.json(await listModifierGroups());
   } catch (error) {
     return NextResponse.json(
@@ -15,6 +18,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const { error } = await requireAccess(request, canManageMenu, "Menu editing is not available for this account");
+    if (error) return error;
     const body = await request.json();
     const name = String(body.name ?? "").trim();
 

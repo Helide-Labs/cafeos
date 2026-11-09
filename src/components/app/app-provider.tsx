@@ -119,28 +119,33 @@ async function readJson<T>(response: Response): Promise<T> {
   return JSON.parse(text) as T;
 }
 
-async function api<T>(url: string, init?: RequestInit): Promise<T> {
-  return readJson<T>(
-    await fetch(url, {
-      ...init,
-      headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
-    }),
-  );
-}
-
-export function AppProvider({ children }: { children: React.ReactNode }) {
+export function AppProvider({ children, authToken }: { children: React.ReactNode; authToken: string }) {
   const [state, setState] = useState<AppState>(emptyState);
   const [hydrated, setHydrated] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const api = useCallback(async <T,>(url: string, init?: RequestInit): Promise<T> => {
+    return readJson<T>(
+      await fetch(url, {
+        ...init,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+          ...(init?.headers || {}),
+        },
+      }),
+    );
+  }, [authToken]);
 
   const refresh = useCallback(async () => {
     const data = await api<AppState>("/api/bootstrap");
     setState(data);
     setError(null);
-  }, []);
+  }, [api]);
 
   useEffect(() => {
     let cancelled = false;
+    setHydrated(false);
     (async () => {
       try {
         await refresh();
@@ -295,7 +300,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await refresh();
       },
     }),
-    [error, hydrated, refresh, state],
+    [api, error, hydrated, refresh, state],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

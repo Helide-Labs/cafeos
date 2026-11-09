@@ -585,7 +585,7 @@ export function TeamModule({ toast }: { toast: ToastFn }) {
 
   return (
     <div className="module-page">
-      <SectionHeader title="Team" description="Schedule, attendance and labour in one place" actions={<button className="btn btn-primary" onClick={openAddEmployee}><Plus size={15} />Add team member</button>} />
+      <SectionHeader title="Team" description="Shift schedules and attendance. Sign-in accounts are created separately under Settings → Staff logins." actions={<button className="btn btn-primary" onClick={openAddEmployee}><Plus size={15} />Add team member</button>} />
       <div className="metric-grid mini">
         <article className="metric-card plain"><p>Working now</p><strong>{working}</strong><small>of {employees.length} on file</small></article>
         <article className="metric-card plain"><p>Scheduled</p><strong>{employees.filter((e) => e.status === "Scheduled").length}</strong><small>Upcoming shifts</small></article>

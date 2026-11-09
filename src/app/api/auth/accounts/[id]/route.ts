@@ -7,7 +7,7 @@ type Params = { params: Promise<{ id: string }> };
 export async function DELETE(request: Request, { params }: Params) {
   try {
     const { account, error } = await requireOwner(request);
-    if (error || !account) return error;
+    if (error) return error;
     const { id } = await params;
     if (id === account.id) {
       return NextResponse.json({ error: "The main account cannot be removed" }, { status: 400 });

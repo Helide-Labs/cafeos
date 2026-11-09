@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
+import { canUseCustomers, requireAccess } from "@/lib/auth-http";
 import { createFeedback, listFeedback } from "@/lib/data/repo";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { error } = await requireAccess(request, canUseCustomers, "Customers are not available for this account");
+    if (error) return error;
     return NextResponse.json(await listFeedback());
   } catch (error) {
     return NextResponse.json(
@@ -14,6 +17,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const { error } = await requireAccess(request, canUseCustomers, "Customers are not available for this account");
+    if (error) return error;
     const body = await request.json();
     const customerName = String(body.customerName ?? "").trim();
     const rating = Number(body.rating);

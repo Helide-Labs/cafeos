@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { canAccess, ROLE_PROFILES, type AppRole } from "@/lib/roles";
 import type { StaffAccount } from "@/lib/types";
 import { AuthGate } from "./auth-gate";
+import { AppProvider, useApp } from "./app-provider";
 import { RoleProvider } from "./role-context";
 import { SESSION_KEY } from "./session";
 import {
@@ -28,7 +29,6 @@ import Overview from "@/components/modules/overview";
 import { InventoryModule, MenuModule, OrdersModule, PosModule } from "@/components/modules/operations";
 import { CustomersModule, ReportsModule, SettingsModule, TeamModule } from "@/components/modules/management";
 import { Modal, Toast } from "@/components/ui/prototype-ui";
-import { useApp } from "./app-provider";
 import type { ModuleId } from "@/lib/types";
 
 const navigation: { id: ModuleId; label: string; icon: typeof Coffee }[] = [
@@ -53,29 +53,9 @@ function branchInitials(name: string) {
 }
 
 export default function CafeApp() {
-  const { tenant, branch, orders, stock, products, customers, hydrated, error } = useApp();
-  const [active, setActive] = useState<ModuleId>("overview");
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [toast, setToast] = useState("");
-  const [helpOpen, setHelpOpen] = useState(false);
-  const [role, setRole] = useState<AppRole>("Owner");
   const [authMode, setAuthMode] = useState<"loading" | "setup" | "login" | "ready">("loading");
   const [sessionUser, setSessionUser] = useState<StaffAccount | null>(null);
-  const profile = ROLE_PROFILES[role];
-  const visibleNav = navigation.filter((item) => canAccess(role, item.id));
-
-  const openOrders = orders.filter((order) => order.status !== "Completed" && order.status !== "Refunded").length;
-  const lowStock = stock.filter((item) => item.quantity < item.minimum).length;
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(""), 2600);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -99,7 +79,8 @@ export default function CafeApp() {
           return;
         }
         const body = await session.json();
-        enter(body.user as StaffAccount);
+        if (cancelled) return;
+        enter(body.user as StaffAccount, token);
       } catch {
         if (!cancelled) setAuthMode("login");
       }
@@ -110,30 +91,64 @@ export default function CafeApp() {
     };
   }, []);
 
-  function enter(user: StaffAccount) {
+  function enter(user: StaffAccount, token: string) {
     const next = (user.role as AppRole) in ROLE_PROFILES ? (user.role as AppRole) : "Cashier";
     setSessionUser({ ...user, role: next });
-    setRole(next);
-    setActive("overview");
+    setSessionToken(token);
     setAuthMode("ready");
   }
 
   function signIn(user: StaffAccount, token: string) {
     window.localStorage.setItem(SESSION_KEY, token);
-    enter(user);
+    enter(user, token);
   }
 
   function signOut() {
     window.localStorage.removeItem(SESSION_KEY);
     setSessionUser(null);
-    setActive("overview");
-    setSearchOpen(false);
+    setSessionToken(null);
     setAuthMode("login");
   }
 
+  if (authMode !== "ready" || !sessionUser || !sessionToken) {
+    return <AuthGate mode={authMode === "ready" ? "loading" : authMode} onReady={signIn} />;
+  }
+
+  return (
+    <AppProvider authToken={sessionToken}>
+      <RoleProvider role={(sessionUser.role as AppRole) in ROLE_PROFILES ? (sessionUser.role as AppRole) : "Cashier"}>
+        <CafeShell sessionUser={sessionUser} onSignOut={signOut} />
+      </RoleProvider>
+    </AppProvider>
+  );
+}
+
+function CafeShell({ sessionUser, onSignOut }: { sessionUser: StaffAccount; onSignOut: () => void }) {
+  const { tenant, branch, orders, stock, products, customers, hydrated, error } = useApp();
+  const role = ((sessionUser.role as AppRole) in ROLE_PROFILES ? sessionUser.role : "Cashier") as AppRole;
+  const [active, setActive] = useState<ModuleId>("overview");
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [toast, setToast] = useState("");
+  const [helpOpen, setHelpOpen] = useState(false);
+  const profile = ROLE_PROFILES[role];
+  const visibleNav = navigation.filter((item) => canAccess(role, item.id));
+
+  const openOrders = orders.filter((order) => order.status !== "Completed" && order.status !== "Refunded").length;
+  const lowStock = stock.filter((item) => item.quantity < item.minimum).length;
+
   useEffect(() => {
-    if (authMode === "ready" && !canAccess(role, active)) setActive("overview");
-  }, [active, authMode, role]);
+    if (!toast) return;
+    const timer = window.setTimeout(() => setToast(""), 2600);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  useEffect(() => {
+    if (!canAccess(role, active)) setActive("overview");
+  }, [active, role]);
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -147,7 +162,9 @@ export default function CafeApp() {
   }, []);
 
   function navigate(id: string) {
-    setActive(id as ModuleId);
+    const moduleId = id as ModuleId;
+    if (!canAccess(role, moduleId)) return;
+    setActive(moduleId);
     setMobileOpen(false);
     setSearchOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -176,10 +193,6 @@ export default function CafeApp() {
     settings: <SettingsModule toast={setToast} />,
   }[active];
 
-  if (authMode !== "ready" || !sessionUser) {
-    return <AuthGate mode={authMode === "ready" ? "loading" : authMode} onReady={signIn} />;
-  }
-
   const helpTopics = [
     { title: "Add a product", body: "Open Menu & recipes, choose Add product, set category, price, and optional modifier groups. Link recipes under the Recipes tab so sales deduct stock.", module: "menu" as ModuleId },
     { title: "Take an order", body: "Use Point of sale to pick items, attach a customer for loyalty, apply discounts or tips, then charge via card, cash, QR, or split payment.", module: "pos" as ModuleId },
@@ -190,7 +203,6 @@ export default function CafeApp() {
   const alertCount = stockAlerts ? lowStock : openOrders;
 
   return (
-    <RoleProvider role={role}>
     <div className={`prototype-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
       {mobileOpen && <button className="mobile-scrim" aria-label="Close menu" onClick={() => setMobileOpen(false)} />}
       <aside className={`prototype-sidebar ${mobileOpen ? "mobile-open" : ""}`}>
@@ -226,7 +238,7 @@ export default function CafeApp() {
             <span>Signed in</span>
             <strong>{sessionUser.name}</strong>
           </div>
-          <button type="button" onClick={signOut}>Sign out</button>
+          <button type="button" onClick={onSignOut}>Sign out</button>
         </div>
         <div className="sidebar-scroll">
           <p className="side-label">Workspace</p>
@@ -347,6 +359,5 @@ export default function CafeApp() {
         </div>
       </Modal>
     </div>
-    </RoleProvider>
   );
 }

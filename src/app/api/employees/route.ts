@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
+import { canUseTeam, requireAccess } from "@/lib/auth-http";
 import { createEmployee, listEmployees } from "@/lib/data/repo";
 import type { Employee } from "@/lib/types";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { error } = await requireAccess(request, canUseTeam, "Team is not available for this account");
+    if (error) return error;
     return NextResponse.json(await listEmployees());
   } catch (error) {
     return NextResponse.json(
@@ -15,6 +18,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const { error } = await requireAccess(request, canUseTeam, "Team is not available for this account");
+    if (error) return error;
     const body = await request.json();
     const name = String(body.name ?? "").trim();
     const role = String(body.role ?? "").trim();

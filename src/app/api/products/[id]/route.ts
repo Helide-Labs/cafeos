@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { canManageMenu, requireAccess } from "@/lib/auth-http";
 import { deleteProduct, patchProduct } from "@/lib/data/repo";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: Params) {
   try {
+    const { error } = await requireAccess(request, canManageMenu, "Menu editing is not available for this account");
+    if (error) return error;
     const { id } = await params;
     const body = await request.json();
     const product = await patchProduct(id, body);
@@ -16,8 +19,10 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_request: Request, { params }: Params) {
+export async function DELETE(request: Request, { params }: Params) {
   try {
+    const { error } = await requireAccess(request, canManageMenu, "Menu editing is not available for this account");
+    if (error) return error;
     const { id } = await params;
     await deleteProduct(id);
     return new NextResponse(null, { status: 204 });

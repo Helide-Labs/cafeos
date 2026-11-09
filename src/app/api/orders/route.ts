@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
+import { canUseOrders, canUsePos, requireAccess } from "@/lib/auth-http";
 import { createOrder, listOrders } from "@/lib/data/repo";
 import type { CartItem, Order } from "@/lib/types";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { error } = await requireAccess(
+      request,
+      (role) => canUseOrders(role) || canUsePos(role),
+      "Orders are not available for this account",
+    );
+    if (error) return error;
     return NextResponse.json(await listOrders());
   } catch (error) {
     return NextResponse.json(
@@ -15,6 +22,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const { error } = await requireAccess(request, canUsePos, "Point of sale is not available for this account");
+    if (error) return error;
     const body = await request.json();
     const cart = (body.cart ?? []) as CartItem[];
     const type = (body.type ?? "Dine in") as Order["type"];
@@ -39,6 +48,7 @@ export async function POST(request: Request) {
       changeDue: typeof body.changeDue === "number" ? body.changeDue : undefined,
       pointsRedeemed: typeof body.pointsRedeemed === "number" ? body.pointsRedeemed : undefined,
     });
+
     return NextResponse.json(order, { status: 201 });
   } catch (error) {
     return NextResponse.json(

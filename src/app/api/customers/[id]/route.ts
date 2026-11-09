@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { canUseCustomers, requireAccess } from "@/lib/auth-http";
 import { deleteCustomer, patchCustomer } from "@/lib/data/repo";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, { params }: Params) {
   try {
+    const { error } = await requireAccess(request, canUseCustomers, "Customers are not available for this account");
+    if (error) return error;
     const { id } = await params;
     const body = await request.json();
     const customer = await patchCustomer(id, body);
@@ -16,8 +19,10 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_request: Request, { params }: Params) {
+export async function DELETE(request: Request, { params }: Params) {
   try {
+    const { error } = await requireAccess(request, canUseCustomers, "Customers are not available for this account");
+    if (error) return error;
     const { id } = await params;
     await deleteCustomer(id);
     return new NextResponse(null, { status: 204 });

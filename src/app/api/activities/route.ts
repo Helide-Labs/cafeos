@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
+import { requireAuth } from "@/lib/auth-http";
 import { addActivity, listActivities } from "@/lib/data/repo";
 import type { Activity } from "@/lib/types";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { error } = await requireAuth(request);
+    if (error) return error;
     return NextResponse.json(await listActivities());
   } catch (error) {
     return NextResponse.json(
@@ -15,6 +18,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const { error } = await requireAuth(request);
+    if (error) return error;
     const body = await request.json();
     const title = String(body.title ?? "").trim();
     const detail = String(body.detail ?? "").trim();
