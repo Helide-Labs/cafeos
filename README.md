@@ -78,6 +78,14 @@ npm run dev
 
 ## Data model
 
+### Beta signups
+
+Visitors can join at `/beta`, linked from the landing page and public navigation. The public `POST /api/beta-signups` endpoint validates name, email, café name, and consent; repeated email submissions do not overwrite existing records. A hidden honeypot field filters basic bots. There is no public list endpoint or automatic email delivery.
+
+With `DATA_BACKEND=firestore`, view collected records in the Firebase console's `betaSignups` collection. With the local backend, each signup is stored in `.data/beta-signups/<email-hash>.json` (excluded from Git). Use Firestore for deployments without persistent writable disk. Records include the signup time and consent version. Delete the corresponding record when someone asks to leave the list.
+
+Run signup validation and persistence checks with `npx tsx --test src/lib/beta-signups.test.ts`.
+
 Collections under `tenants/{tenantId}/branches/{branchId}/`:
 
 - `products`, `orders`, `stock`, `customers`, `employees`, `activities`
