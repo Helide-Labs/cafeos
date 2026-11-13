@@ -1,0 +1,7 @@
+import type { Metadata } from "next";
+import { Coffee, Heart, Sprout } from "lucide-react";
+import { CallToAction, PageIntro } from "@/components/marketing/content";
+export const metadata: Metadata = { title: "Our approach | Caflix", description: "A connected approach to the everyday work of running a café." };
+export default function About() {
+  return <><PageIntro eyebrow="OUR APPROACH" title="Built for the people behind the counter." text="Great cafés are personal. The regular’s usual order. A carefully dialed-in espresso. A team that knows the morning rhythm. Your tools should leave room for all of it." /><section className="m-about-statement"><Coffee size={42} strokeWidth={1.3} /><h2>Your passion is the café.<br /><em>Our focus is the work around it.</em></h2><p>Caflix brings sales, recipes, inventory, and business visibility into one workspace. The idea is simple: when the details live together, it’s easier to understand what’s happening and decide what comes next.</p></section><section className="m-section"><div className="m-feature-grid"><article><Coffee /><h3>Café first</h3><p>Built around menus, ingredients, preparation, and service—the details that make a café different.</p></article><article><Heart /><h3>Clarity every day</h3><p>A shared place for the information owners, managers, and staff need to do their work.</p></article><article><Sprout /><h3>Connected by design</h3><p>Keep the journey from sale to stock to margin in view, so individual tasks add up to a useful picture.</p></article></div></section><CallToAction /></>;
+}

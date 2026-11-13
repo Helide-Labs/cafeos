@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Coffee } from "lucide-react";
 import type { StaffAccount } from "@/lib/types";
 
@@ -68,6 +69,7 @@ export function AuthGate({
         </label>
         {error && <p className="auth-error">{error}</p>}
         <button className="btn btn-primary" type="submit" disabled={busy}>{busy ? "Please wait…" : setup ? "Create main account" : "Sign in"}</button>
+        <p><Link href="/">← Back to Caflix</Link> · <Link href="/help">Need help?</Link></p>
       </form>
     </div>
   );

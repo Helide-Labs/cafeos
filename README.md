@@ -20,6 +20,8 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+Public pages are available at `/`, `/features`, `/about`, and `/help`. The café workspace is at `/app`; `/login` redirects there and uses the existing setup/sign-in flow. Staff accounts are created by the main account owner. The landing page’s dashboard values are illustrative and are not live business data.
+
 Default `DATA_BACKEND=memory` stores data in `.data/cafeos-memory.json`. No demo products/orders are seeded.
 
 ## Firestore emulator (optional local Firebase)
@@ -83,5 +85,5 @@ Collections under `tenants/{tenantId}/branches/{branchId}/`:
 
 ## Notes
 
-- Auth/RBAC is not enabled yet. APIs use `DEFAULT_TENANT_ID` / `DEFAULT_BRANCH_ID`.
+- The workspace uses account sign-in and role-based access. The installation uses `DEFAULT_TENANT_ID` / `DEFAULT_BRANCH_ID` for its café context.
 - Create products in **Menu & recipes**, then sell from **Point of sale**.

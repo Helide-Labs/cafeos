@@ -1,0 +1,34 @@
+[debug] [2026-10-07T04:45:32.694Z] ----------------------------------------------------------------------
+[debug] [2026-10-07T04:45:32.698Z] Command:       C:\Program Files\nodejs\node.exe D:\Cursor New Projects\cafeos\node_modules\firebase-tools\lib\bin\firebase.js emulators:start --only firestore --project demo-cafeos
+[debug] [2026-10-07T04:45:32.698Z] CLI Version:   15.32.1
+[debug] [2026-10-07T04:45:32.699Z] Platform:      win32
+[debug] [2026-10-07T04:45:32.699Z] Node Version:  v24.16.0
+[debug] [2026-10-07T04:45:32.699Z] Detected Agent: cursor
+[debug] [2026-10-07T04:45:32.699Z] Time:          Wed Oct 07 2026 10:15:32 GMT+0530 (India Standard Time)
+[debug] [2026-10-07T04:45:32.699Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-10-07T04:45:32.739Z] >>> [apiv2][query] GET https://firebase-public.firebaseio.com/cli.json [none]
+[debug] [2026-10-07T04:46:01.543Z] <<< [apiv2][status] GET https://firebase-public.firebaseio.com/cli.json 200
+[debug] [2026-10-07T04:46:01.544Z] <<< [apiv2][body] GET https://firebase-public.firebaseio.com/cli.json {"cloudBuildErrorAfter":1594252800000,"cloudBuildWarnAfter":1590019200000,"defaultNode10After":1594252800000,"minVersion":"3.0.5","node8DeploysDisabledAfter":1613390400000,"node8RuntimeDisabledAfter":1615809600000,"node8WarnAfter":1600128000000}
+[debug] [2026-10-07T04:46:02.876Z] java version "24.0.1" 2025-04-15
+
+[debug] [2026-10-07T04:46:02.876Z] Java(TM) SE Runtime Environment (build 24.0.1+9-30)
+Java HotSpot(TM) 64-Bit Server VM (build 24.0.1+9-30, mixed mode, sharing)
+
+[debug] [2026-10-07T04:46:02.938Z] Parsed Java major version: 24
+[info] i  emulators: Starting emulators: firestore {"metadata":{"emulator":{"name":"hub"},"message":"Starting emulators: firestore"}}
+[info] i  emulators: Detected demo project ID "demo-cafeos", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail. {"metadata":{"emulator":{"name":"hub"},"message":"Detected demo project ID \"demo-cafeos\", emulated services will use a demo configuration and attempts to access non-emulated services for this project will fail."}}
+[debug] [2026-10-07T04:46:02.957Z] [logging] Logging Emulator only supports listening on one address (127.0.0.1). Not listening on ::1
+[debug] [2026-10-07T04:46:02.957Z] assigned listening specs for emulators {"user":{"firestore":[{"address":"127.0.0.1","family":"IPv4","port":8080}],"firestore.websocket":[{"address":"127.0.0.1","family":"IPv4","port":9150}],"hub":[{"address":"127.0.0.1","family":"IPv4","port":4400},{"address":"::1","family":"IPv6","port":4400}],"ui":[{"address":"127.0.0.1","family":"IPv4","port":4000},{"address":"::1","family":"IPv6","port":4000}],"logging":[{"address":"127.0.0.1","family":"IPv4","port":4500}]},"metadata":{"message":"assigned listening specs for emulators"}}
+[debug] [2026-10-07T04:46:02.964Z] Write emulator hub locator at C:\Users\HP\AppData\Local\Temp\hub-demo-cafeos.json
+[warn] !  firestore: Cloud Firestore Emulator does not support multiple databases yet. {"metadata":{"emulator":{"name":"firestore"},"message":"Cloud Firestore Emulator does not support multiple databases yet."}}
+[warn] !  firestore: Did not find a Cloud Firestore rules file specified in a firebase.json config file. {"metadata":{"emulator":{"name":"firestore"},"message":"Did not find a Cloud Firestore rules file specified in a firebase.json config file."}}
+[warn] !  firestore: The emulator will default to allowing all reads and writes. Learn more about this option: https://firebase.google.com/docs/emulator-suite/install_and_configure#security_rules_configuration. {"metadata":{"emulator":{"name":"firestore"},"message":"The emulator will default to allowing all reads and writes. Learn more about this option: https://firebase.google.com/docs/emulator-suite/install_and_configure#security_rules_configuration."}}
+[info] i  firestore: downloading cloud-firestore-emulator-v1.22.0.jar... {"metadata":{"emulator":{"name":"firestore"},"message":"downloading cloud-firestore-emulator-v1.22.0.jar..."}}
+[debug] [2026-10-07T04:46:02.986Z] >>> [apiv2][query] GET https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-firestore-emulator-v1.22.0.jar 
+[debug] [2026-10-07T04:46:03.609Z] <<< [apiv2][status] GET https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-firestore-emulator-v1.22.0.jar 200
+[debug] [2026-10-07T04:46:03.610Z] <<< [apiv2][body] GET https://storage.googleapis.com/firebase-preview-drop/emulator/cloud-firestore-emulator-v1.22.0.jar [stream]
+[debug] [2026-10-07T05:01:26.184Z] Error: ENOSPC: no space left on device, write
+[error] 
+[error] Error: An unexpected error has occurred.
+[debug] [2026-10-07T05:01:26.516Z] Found emulator hub locator: {"version":"15.32.1","origins":["http://127.0.0.1:4400","http://[::1]:4400"],"pid":4748}
